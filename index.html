@@ -1,0 +1,3417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title id="doc-title">サクポモ-サクッとポモドーロタイマー</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#D1EAF5">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500&family=Noto+Serif+JP:wght@300;400;500&family=Roboto+Mono:wght@300;400;500&family=Zen+Maru+Gothic:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --work-bg: #D1EAF5;
+            --break-bg: #E6F2D6;
+            
+            --bg-color: #D1EAF5;
+            --text-main: #1A202C;
+            --text-muted: rgba(26, 32, 44, 0.65);
+            --card-bg: rgba(255, 255, 255, 0.22);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --btn-bg: rgba(0, 0, 0, 0.06);
+            --btn-hover: rgba(0, 0, 0, 0.12);
+            --btn-active: rgba(0, 0, 0, 0.18);
+            --ring-track: rgba(0, 0, 0, 0.1);
+            --ring-progress: #1A202C;
+            
+            --accent-color: #F6AD55;
+            --danger-color: #E53E3E;
+            --success-color: #38A169;
+            
+            --app-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            
+            --nav-height: 64px;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-size: 100%;
+        }
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--app-font);
+            font-weight: 300;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s ease;
+            line-height: 1.4;
+        }
+
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        
+        .font-mono, .time-text, .input-num-large, .summary-val, .day-num, .record-badge, input, select, button, textarea {
+            font-family: var(--app-font);
+            font-weight: 300;
+        }
+
+        button, input, select, textarea { line-height: 1.2; }
+
+        header {
+            padding-top: calc(env(safe-area-inset-top, 0px) + 28px);
+            padding-bottom: 14px;
+            padding-left: 20px;
+            padding-right: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            flex-shrink: 0;
+        }
+
+        .app-title {
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: 0.03em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+            transition: color 0.6s ease;
+            line-height: 1;
+        }
+
+        main {
+            flex: 1;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 10px 20px calc(var(--nav-height) + var(--safe-bottom) + 30px);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .view-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- タイマー画面 --- */
+        #view-timer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .timer-main-controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .timer-config-wrap {
+            width: 100%;
+        }
+
+        @media (min-width: 680px), (orientation: landscape) and (max-height: 560px) {
+            main {
+                max-width: 880px;
+                justify-content: center;
+            }
+            #view-timer {
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 32px;
+                max-width: 860px;
+                margin: auto;
+            }
+            .timer-main-controls {
+                flex: 1;
+                max-width: 360px;
+            }
+            .timer-config-wrap {
+                flex: 1;
+                max-width: 360px;
+            }
+            .timer-ring-container {
+                margin: 0 auto 16px !important;
+            }
+            .control-group {
+                margin-bottom: 0 !important;
+            }
+        }
+
+        .timer-ring-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 16px auto 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .timer-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .timer-circle-track {
+            fill: none;
+            stroke: var(--text-main);
+            opacity: 0.15;
+            stroke-width: 6;
+            transition: stroke 0.6s ease, opacity 0.6s ease;
+        }
+
+        .timer-circle-progress {
+            fill: none;
+            stroke: var(--text-main);
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 816.8;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.8s linear, stroke 0.6s ease;
+        }
+
+        .timer-display {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            width: 85%;
+        }
+
+        .clock-info {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+            margin-bottom: 2px;
+            text-align: center;
+            font-weight: 300;
+            height: 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .time-text {
+            font-size: 4.2rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin-bottom: 2px;
+            font-variant-numeric: tabular-nums;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            height: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* ご要望通り：READYの下に何サイクル目かをエレガントに表示 */
+        .cycle-info {
+            font-size: 0.78rem;
+            color: var(--text-main);
+            font-weight: 400;
+            margin-top: 4px;
+            opacity: 0.9;
+            letter-spacing: 0.05em;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            border: none;
+            outline: none;
+            cursor: pointer;
+            font-weight: 300;
+            border-radius: 16px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-main {
+            flex: 1;
+            max-width: 200px;
+            height: 56px;
+            font-size: 1.1rem;
+            background: var(--text-main);
+            color: var(--bg-color);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+        .btn-main:hover { transform: translateY(-1px); opacity: 0.95; }
+        .btn-main:active { transform: translateY(1px); }
+
+        .btn-sub {
+            width: 56px;
+            height: 56px;
+            background: var(--btn-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            backdrop-filter: blur(8px);
+        }
+        .btn-sub:hover { background: var(--btn-hover); }
+
+        .timer-config-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 18px;
+            backdrop-filter: blur(10px);
+        }
+
+        .preset-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .preset-btn {
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 14px 10px;
+            border-radius: 14px;
+            font-size: 0.88rem;
+            font-weight: 300;
+            line-height: 1.4;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            letter-spacing: 0.03em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 54px;
+        }
+        .preset-btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
+        .preset-btn:active { transform: translateY(0); }
+
+        .timer-inputs-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .time-input-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 10px;
+        }
+
+        .time-input-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            margin-bottom: 6px;
+            letter-spacing: 0.05em;
+        }
+
+        .time-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .input-num-large {
+            width: 70px;
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.26);
+            color: var(--text-main);
+            font-size: 1.25rem;
+            font-weight: 300;
+            text-align: center;
+        }
+        .input-num-large:focus { outline: 1px solid var(--text-main); }
+
+        /* --- カレンダー画面 --- */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            background: var(--card-bg);
+            padding: 10px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .month-title {
+            font-size: 1.05rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: var(--btn-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 300;
+        }
+        .btn-icon:hover { background: var(--btn-hover); }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 14px;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .summary-val {
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin-top: 4px;
+        }
+
+        .summary-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        .calendar-grid {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 14px 10px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 16px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            padding-bottom: 8px;
+        }
+        .weekday.sun { color: #E53E3E; }
+        .weekday.sat { color: #3182CE; }
+
+        .cal-day {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 3px 1px;
+            font-size: 0.8rem;
+            font-weight: 300;
+            position: relative;
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .cal-day:hover {
+            border-color: var(--card-border);
+            background: rgba(0, 0, 0, 0.07);
+        }
+
+        .cal-day.empty { background: transparent; cursor: default; }
+
+        .cal-day.future {
+            opacity: 0.35;
+            cursor: default;
+            background: transparent;
+        }
+        .cal-day.future:hover { border-color: transparent; background: transparent; }
+
+        .cal-day.today { border: 1px solid var(--text-main); }
+
+        .cal-day .day-num {
+            font-size: 0.75rem;
+            margin-bottom: 1px;
+            flex-shrink: 0;
+            line-height: 1.1;
+        }
+
+        .cal-day .record-badge {
+            font-size: 0.6rem;
+            background: var(--text-main);
+            color: var(--bg-color);
+            padding: 1px 3px;
+            border-radius: 5px;
+            font-weight: 400;
+            max-width: 96%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: auto;
+            margin-bottom: 1px;
+            line-height: 1.2;
+            flex-shrink: 0;
+        }
+
+        .cal-day.level-1 { background: rgba(0, 0, 0, 0.06); }
+        .cal-day.level-2 { background: rgba(0, 0, 0, 0.12); }
+        .cal-day.level-3 { background: rgba(0, 0, 0, 0.22); }
+        .cal-day.level-4 { background: rgba(0, 0, 0, 0.35); }
+
+        /* --- 集中記録（多期間・グラフ対応） --- */
+        .records-controls-top {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        @media (min-width: 480px) {
+            .records-controls-top {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+        .period-tabs, .mode-tabs {
+            display: flex;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 4px;
+            border-radius: 14px;
+            backdrop-filter: blur(10px);
+        }
+        .period-tabs { flex: 1; justify-content: space-between; }
+        .mode-tabs { justify-content: center; }
+        .period-tab, .mode-tab {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 8px 6px;
+            font-size: 0.84rem;
+            font-weight: 300;
+            color: var(--text-main);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .period-tab.active, .mode-tab.active {
+            background: var(--text-main);
+            color: var(--bg-color);
+            font-weight: 400;
+        }
+
+        /* 日別詳細カード */
+        .day-detail-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 32px 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            margin-bottom: 16px;
+        }
+        .day-detail-mins {
+            font-size: 3.2rem;
+            font-weight: 300;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+        .day-detail-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        /* 週別リスト */
+        .week-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .week-row {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .week-row:hover { background: rgba(0,0,0,0.06); }
+        .week-row.today { border-color: var(--text-main); }
+        .week-row-date { font-size: 0.9rem; font-weight: 300; width: 100px; }
+        .week-row-bar-wrap { flex: 1; margin: 0 16px; height: 8px; background: rgba(0,0,0,0.06); border-radius: 4px; overflow: hidden; }
+        body.dark-mode .week-row-bar-wrap { background: rgba(255,255,255,0.08); }
+        .week-row-bar { height: 100%; background: var(--text-main); border-radius: 4px; transition: width 0.3s; }
+        .week-row-mins { font-size: 0.95rem; font-weight: 400; width: 60px; text-align: right; }
+
+        /* 年間（月別）グリッド */
+        .year-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .year-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .year-card:hover { border-color: var(--text-main); }
+        .year-card-mo { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
+        .year-card-mins { font-size: 1.25rem; font-weight: 300; margin-bottom: 4px; }
+        .year-card-days { font-size: 0.72rem; opacity: 0.7; }
+
+        /* グラフコンテナ */
+        .chart-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px 16px 16px 16px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chart-bars-wrap {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 200px;
+            gap: 6px;
+            padding-top: 24px;
+            min-width: 100%;
+        }
+        .chart-bars-wrap.scrollable {
+            min-width: 580px;
+        }
+        .chart-col {
+            flex: 1 1 0%;
+            width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            cursor: pointer;
+            position: relative;
+        }
+        .chart-val {
+            font-size: 0.64rem;
+            color: var(--text-main);
+            opacity: 0.75;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        .chart-track {
+            flex: 1;
+            width: 14px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 6px;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+            margin: 4px auto;
+        }
+        body.dark-mode .chart-track { background: rgba(255,255,255,0.06); }
+        .chart-fill {
+            width: 100%;
+            background: var(--text-main);
+            opacity: 0.45;
+            border-radius: 6px;
+            transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .chart-col.highlight .chart-fill {
+            opacity: 1;
+            box-shadow: 0 0 10px rgba(0,0,0,0.15);
+        }
+        .chart-lbl {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-align: center;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        /* --- 設定画面 --- */
+        .settings-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-card h3 {
+            font-size: 0.95rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .accordion-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            font-weight: 300;
+            cursor: pointer;
+            padding: 4px 0;
+            text-align: left;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .form-group:last-child { margin-bottom: 0; }
+
+        .form-label { font-size: 0.9rem; font-weight: 300; }
+        .form-sublabel {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 300;
+        }
+
+        .input-text {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.6);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            font-weight: 300;
+        }
+        .input-text:focus { outline: 1px solid var(--text-main); }
+
+        .input-select {
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.6);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-weight: 300;
+        }
+        .input-select:focus { outline: 1px solid var(--text-main); }
+
+        .color-pickers { display: flex; gap: 10px; align-items: center; }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            cursor: pointer;
+            background: transparent;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 20px;
+        }
+
+        .btn-text-small {
+            background: var(--btn-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 300;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .btn-text-small:hover { background: var(--btn-hover); transform: translateY(-1px); }
+
+        .color-presets-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 6px;
+            margin-bottom: 20px;
+        }
+        .color-preset-btn {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .color-preset-btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
+        .preset-swatches { display: flex; gap: 4px; }
+        .preset-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.15);
+        }
+        .preset-title { font-size: 0.7rem; color: var(--text-main); }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.15);
+            border: 1px solid var(--card-border);
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-main);
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: rgba(0,0,0,0.25); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: calc(var(--nav-height) + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: rgba(26, 32, 44, 0.45);
+            text-decoration: none;
+            font-size: 0.7rem;
+            font-weight: 300;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            background: transparent;
+            letter-spacing: 0.03em;
+        }
+
+        .nav-item svg { width: 22px; height: 22px; fill: currentColor; transition: transform 0.2s ease; }
+        .nav-item.active { color: #1A202C; font-weight: 400; }
+
+        /* モーダル */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-content {
+            background: #FFFFFF;
+            color: #1A202C;
+            width: 100%;
+            max-width: 380px;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border: 1px solid rgba(0,0,0,0.1);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
+        .modal-title { font-size: 1.05rem; font-weight: 300; }
+
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+            width: 90%;
+            max-width: 360px;
+        }
+
+        .toast {
+            background: rgba(26, 32, 44, 0.95);
+            color: #FFFFFF;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 300;
+            letter-spacing: 0.03em;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            animation: toastIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="app-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="opacity: 0.8;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+            </svg>
+            <span data-i18n="app_title_short">サクポモ</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- ==================== タイマー画面 ==================== -->
+        <section id="view-timer" class="view-section">
+            <div class="timer-main-controls">
+                <div class="timer-ring-container">
+                    <svg class="timer-svg" viewBox="0 0 280 280">
+                        <circle class="timer-circle-track" cx="140" cy="140" r="130"></circle>
+                        <circle class="timer-circle-progress" id="timer-progress" cx="140" cy="140" r="130"></circle>
+                    </svg>
+                    <div class="timer-display">
+                        <div class="clock-info font-mono">
+                            <div id="text-clock-now">現在 --:--</div>
+                            <div id="text-clock-end">終了 --:--</div>
+                        </div>
+                        <div class="time-text font-mono" id="time-display">50:00</div>
+                        <div class="timer-status" id="timer-status">READY</div>
+                        <div class="cycle-info font-mono" id="cycle-display">1サイクル目</div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <button class="btn btn-sub" id="btn-reset" title="リセット">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-main" id="btn-toggle">
+                        <svg id="icon-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg id="icon-pause" class="hidden" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                        <span id="btn-toggle-text" data-i18n="btn_start">スタート</span>
+                    </button>
+                    <button class="btn btn-sub" id="btn-skip" title="スキップ">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="timer-config-wrap">
+                <div class="timer-config-card">
+                    <div class="preset-group">
+                        <button class="preset-btn" data-work="25" data-break="5" id="btn-pre-25">25分集中<br>5分休憩</button>
+                        <button class="preset-btn" data-work="50" data-break="10" id="btn-pre-50">50分集中<br>10分休憩</button>
+                    </div>
+
+                    <div class="timer-inputs-row">
+                        <div class="time-input-box">
+                            <span class="time-input-label" data-i18n="focus_time">集中時間</span>
+                            <div class="time-input-wrap">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" id="timer-work-mins" class="input-num-large font-mono" min="1" max="999" value="50">
+                                <span style="font-size: 0.85rem;" data-i18n="min">分</span>
+                            </div>
+                        </div>
+                        <div class="time-input-box">
+                            <span class="time-input-label" data-i18n="break_time">休憩時間</span>
+                            <div class="time-input-wrap">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" id="timer-break-mins" class="input-num-large font-mono" min="1" max="999" value="10">
+                                <span style="font-size: 0.85rem;" data-i18n="min">分</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== カレンダー画面 ==================== -->
+        <section id="view-calendar" class="view-section hidden">
+            <div class="records-controls-top font-system">
+                <div class="period-tabs">
+                    <button class="period-tab active" data-period="day">日</button>
+                    <button class="period-tab" data-period="week">週</button>
+                    <button class="period-tab" data-period="month">月</button>
+                    <button class="period-tab" data-period="year">年</button>
+                </div>
+                <div class="mode-tabs">
+                    <button class="mode-tab active" data-mode="list">一覧</button>
+                    <button class="mode-tab" data-mode="graph">グラフ</button>
+                </div>
+            </div>
+
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="summary-label" id="summary-label-time" data-i18n="cal_total_time">今月の集中時間</div>
+                    <div class="summary-val font-mono" id="cal-total-time">0分</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label" id="summary-label-days" data-i18n="cal_total_days">集中した日数</div>
+                    <div class="summary-val font-mono" id="cal-total-days">0日</div>
+                </div>
+            </div>
+
+            <div class="calendar-header">
+                <button class="btn-icon" id="btn-prev-month">&lt;</button>
+                <div class="month-title font-mono" id="calendar-month-title">2026年 6月</div>
+                <button class="btn-icon" id="btn-next-month">&gt;</button>
+            </div>
+
+            <div id="records-content-area">
+                <div class="calendar-grid" id="calendar-grid"></div>
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+                <button class="btn-text-small" id="btn-jump-today" style="padding: 10px 32px; font-size: 0.85rem; border-radius: 20px;" data-i18n="btn_jump_today">
+                    今日に戻る
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== 設定画面（ご指定の厳格な8項目順序） ==================== -->
+        <section id="view-settings" class="view-section hidden">
+            
+            <!-- 1. タイマー動作設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_timer">タイマー動作設定</h3>
+                
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_def_work">標準の集中時間</div>
+                        <div class="form-sublabel" data-i18n="sub_def">起動時・リセット時のデフォルト</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="setting-default-work" class="input-select font-mono" style="width: 68px; text-align: center;" min="1" max="999" value="50">
+                        <span style="font-size: 0.82rem;" data-i18n="min">分</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_def_break">標準の休憩時間</div>
+                        <div class="form-sublabel" data-i18n="sub_def">起動時・リセット時のデフォルト</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="setting-default-break" class="input-select font-mono" style="width: 68px; text-align: center;" min="1" max="999" value="10">
+                        <span style="font-size: 0.82rem;" data-i18n="min">分</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_auto_start">自動スタート</div>
+                        <div class="form-sublabel" data-i18n="sub_auto_start">集中・休憩が切り替わった時に自動で開始</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="setting-auto-start" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 2. スプレッドシート同期設定 -->
+            <div class="settings-card">
+                <button class="accordion-header" id="btn-toggle-sync-panel">
+                    <span data-i18n="card_sync">クラウド同期設定 (上級者向け)</span>
+                    <span class="accordion-icon font-mono" id="sync-panel-arrow">＋</span>
+                </button>
+                
+                <div class="hidden" id="sync-panel-content" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--card-border);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 16px;" id="text-sync-desc">
+                        Googleスプレッドシートを用いて複数端末間で集中記録と設定を同期できます。<br>
+                        【使い方】<br>
+                        1. Googleスプレッドシートを新規作成し、拡張機能からApps Scriptを開いて<span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">専用コード</span>を配置します。<br>
+                        2. 「デプロイ」よりウェブアプリとして導入し、発行されたURLと任意の共有キー（自動生成も可能）を下記に入力してください。<br>
+                        <span style="font-size: 0.72rem; color: #E53E3E;">※Apps Scriptの作成・デプロイ作業はPCでの操作を推奨いたします。</span>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <div class="form-label" style="font-size: 0.82rem; margin-bottom: 6px;" data-i18n="label_gas_url">Apps Script URL</div>
+                        <input type="text" id="sync-gas-url-input" class="input-text font-mono" style="font-size: 0.8rem;" placeholder="https://script.google.com/macros/s/.../exec">
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <div class="form-label" style="font-size: 0.82rem; margin-bottom: 6px;" data-i18n="label_sync_key">共有キー</div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="password" id="sync-key-input" class="input-text font-mono" placeholder="共有キーを入力" data-i18n="sync_key_ph">
+                            <button class="btn-text-small" id="btn-generate-key" data-i18n="btn_gen_key">自動生成</button>
+                            <button class="btn-text-small" id="btn-toggle-key-visibility" data-i18n="btn_show">表示</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 12px;">
+                        <span id="last-sync-time" data-i18n="status_no_sync">最終同期: なし</span>
+                    </div>
+
+                    <button class="btn btn-main" id="btn-sync-now" style="width: 100%; height: 44px; font-size: 0.95rem;" data-i18n="btn_sync_now">
+                        今すぐ記録と設定を同期する
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. カラー設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_color">カラー設定</h3>
+
+                <div>
+                    <div class="form-sublabel" style="margin-bottom: 6px;" data-i18n="label_themes">ワンタッチおすすめテーマ</div>
+                    <div class="color-presets-grid">
+                        <button class="color-preset-btn" data-work="#D1EAF5" data-break="#E6F2D6" data-text="#1A202C">
+                            <div class="preset-swatches">
+                                <span class="preset-swatch" style="background: #D1EAF5;"></span>
+                                <span class="preset-swatch" style="background: #E6F2D6;"></span>
+                            </div>
+                            <span class="preset-title" data-i18n="theme_pastel">標準パステル</span>
+                        </button>
+                        <button class="color-preset-btn" data-work="#2D3748" data-break="#4A5568" data-text="#FFFFFF">
+                            <div class="preset-swatches">
+                                <span class="preset-swatch" style="background: #2D3748;"></span>
+                                <span class="preset-swatch" style="background: #4A5568;"></span>
+                            </div>
+                            <span class="preset-title" data-i18n="theme_dark">シックダーク</span>
+                        </button>
+                        <button class="color-preset-btn" data-work="#F4ECE1" data-break="#E2E8F0" data-text="#1A202C">
+                            <div class="preset-swatches">
+                                <span class="preset-swatch" style="background: #F4ECE1;"></span>
+                                <span class="preset-swatch" style="background: #E2E8F0;"></span>
+                            </div>
+                            <span class="preset-title" data-i18n="theme_latte">カフェラテ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_work_col">集中時間のカラー</div>
+                        <div class="form-sublabel font-mono" id="label-work-color-code">#D1EAF5</div>
+                    </div>
+                    <div class="color-pickers">
+                        <input type="color" id="setting-work-color" value="#D1EAF5">
+                        <button class="btn-text-small" id="btn-reset-work-color" data-i18n="btn_reset">リセット</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_break_col">休憩時間のカラー</div>
+                        <div class="form-sublabel font-mono" id="label-break-color-code">#E6F2D6</div>
+                    </div>
+                    <div class="color-pickers">
+                        <input type="color" id="setting-break-color" value="#E6F2D6">
+                        <button class="btn-text-small" id="btn-reset-break-color" data-i18n="btn_reset">リセット</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_text_col">文字カラー</div>
+                        <div class="form-sublabel font-mono" id="label-text-color-code">#1A202C</div>
+                    </div>
+                    <div class="color-pickers">
+                        <input type="color" id="setting-text-color" value="#1A202C">
+                        <button class="btn-text-small" id="btn-reset-text-color" data-i18n="btn_reset">リセット</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. サウンド設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_sound">サウンド設定</h3>
+                
+                <div style="font-size: 0.72rem; color: #E53E3E; margin-bottom: 14px; line-height: 1.5;" data-i18n="sound_notice">
+                    ※サウンドが鳴らない場合は、端末の消音モード（マナーモード）の解除をしてください。
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_sound_on">サウンド通知</div>
+                        <div class="form-sublabel" data-i18n="sub_sound_on">終了時にアラーム音を再生</div>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn-text-small" id="btn-test-sound" data-i18n="btn_test_sound">テスト再生</button>
+                        <label class="switch">
+                            <input type="checkbox" id="setting-sound" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_sound_type">アラーム音の種類</div>
+                        <div class="form-sublabel" data-i18n="sub_sound_type">音色の切り替え</div>
+                    </div>
+                    <select id="setting-sound-type" class="input-select">
+                        <option value="chime" data-i18n="sound_chime">チャイム (定番2音)</option>
+                        <option value="wood" data-i18n="sound_wood">ウッドブロック (軽快)</option>
+                        <option value="bell" data-i18n="sound_bell">ヒーリングベル (余韻長め)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 5. 言語設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_lang">言語設定 (Language)</h3>
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_lang">表示言語</div>
+                        <div class="form-sublabel" data-i18n="sub_lang">アプリの言語切り替え</div>
+                    </div>
+                    <select id="setting-lang" class="input-select">
+                        <option value="ja">日本語</option>
+                        <option value="en">English</option>
+                        <option value="zh">简体中文</option>
+                        <option value="es">Español</option>
+                        <option value="pt">Português</option>
+                        <option value="ko">한국어</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_tz">タイムゾーン</div>
+                        <div class="form-sublabel" data-i18n="sub_tz">時刻表示の地域基準</div>
+                    </div>
+                    <select id="setting-timezone" class="input-select font-mono">
+                        <option value="Asia/Tokyo">Tokyo (UTC+9)</option>
+                        <option value="America/New_York">New York (UTC-5)</option>
+                        <option value="Europe/London">London (UTC+0)</option>
+                        <option value="Europe/Paris">Paris / Berlin (UTC+1)</option>
+                        <option value="Asia/Seoul">Seoul (UTC+9)</option>
+                        <option value="Asia/Shanghai">Shanghai (UTC+8)</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 6. フォント設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_font">フォント設定</h3>
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_font">アプリ全体のフォント</div>
+                        <div class="form-sublabel" data-i18n="sub_font">文字・数字のデザイン変更</div>
+                    </div>
+                    <select id="setting-font-family" class="input-select">
+                        <option value="system" data-i18n="font_sys">システム標準 (デフォルト)</option>
+                        <option value="noto-sans" data-i18n="font_noto">Noto Sans</option>
+                        <option value="zen-maru" data-i18n="font_maru">Zen Maru Gothic (丸ゴシック)</option>
+                        <option value="noto-serif" data-i18n="font_serif">Noto Serif JP (明朝体)</option>
+                        <option value="roboto-mono" data-i18n="font_mono">Roboto Mono (等幅モノスペース)</option>
+                        <option value="ud-kyokasho" data-i18n="font_ud">UDデジタル教科書体</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 7. 文字サイズ設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_scale">文字サイズ設定</h3>
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_scale">アプリ全体の文字サイズ</div>
+                        <div class="form-sublabel" data-i18n="sub_scale">見やすさの拡大・縮小スケール</div>
+                    </div>
+                    <select id="setting-font-scale" class="input-select">
+                        <option value="100" data-i18n="scale_100">標準 (100% / デフォルト)</option>
+                        <option value="110" data-i18n="scale_110">少し大きめ (110%)</option>
+                        <option value="120" data-i18n="scale_120">大きめ (120%)</option>
+                        <option value="90" data-i18n="scale_90">少し小さめ (90%)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 8. カレンダー設定 -->
+            <div class="settings-card">
+                <h3 data-i18n="card_cal">カレンダー設定</h3>
+                <div class="form-group">
+                    <div>
+                        <div class="form-label" data-i18n="label_start_day">週の始まり</div>
+                        <div class="form-sublabel" data-i18n="sub_start_day">カレンダーの左端に来る曜日</div>
+                    </div>
+                    <select id="setting-start-day" class="input-select">
+                        <option value="monday" data-i18n="day_mon">月曜始まり</option>
+                        <option value="sunday" data-i18n="day_sun">日曜始まり</option>
+                    </select>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-view="timer">
+            <svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+            <span data-i18n="nav_timer">タイマー</span>
+        </button>
+        <button class="nav-item" data-view="calendar">
+            <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+            <span data-i18n="nav_records">集中記録</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            <span data-i18n="nav_settings">設定</span>
+        </button>
+    </nav>
+
+    <!-- 手動記録編集モーダル -->
+    <div class="modal-overlay" id="record-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-date-title">2026年6月25日の記録</div>
+                <button class="btn-icon" id="btn-close-modal" style="width: 28px; height: 28px;">&times;</button>
+            </div>
+            <div style="font-size: 0.82rem; color: #718096; margin-bottom: 16px;" data-i18n="modal_rec_desc">
+                この日の集中合計時間（分）を手動で編集・追加できます。
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px;">
+                <input type="number" inputmode="numeric" pattern="[0-9]*" id="modal-mins-input" class="input-num-large font-mono" style="width: 100px; font-size: 1.4rem; height: 50px;" min="1" max="999">
+                <span style="font-size: 1.1rem;" data-i18n="min">分</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-sub" id="btn-modal-delete" style="flex: 1; height: 44px; background: rgba(229,62,62,0.1); color: #E53E3E; border-color: rgba(229,62,62,0.3); font-size: 0.85rem;" data-i18n="btn_del_rec">記録を削除</button>
+                <button class="btn btn-main" id="btn-modal-save" style="flex: 2; height: 44px; background: #3182CE; color: #FFFFFF; font-size: 0.95rem;" data-i18n="btn_save_rec">保存する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 削除確認モーダル -->
+    <div class="modal-overlay" id="delete-confirm-modal" style="z-index: 300;">
+        <div class="modal-content" style="max-width: 320px; text-align: center; padding: 28px 20px;">
+            <div style="font-size: 1.02rem; font-weight: 300; margin-bottom: 24px;" id="del-confirm-msg">本当に削除しますか？</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-sub" id="btn-cancel-delete" style="flex: 1; height: 42px; font-size: 0.88rem;">キャンセル</button>
+                <button class="btn btn-main" id="btn-exec-delete" style="flex: 1; height: 42px; background: #E53E3E; color: #FFFFFF; font-size: 0.88rem;">削除する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 「専用コード」確認モーダル -->
+    <div class="modal-overlay" id="gas-code-modal">
+        <div class="modal-content" style="max-width: 500px; height: 85vh;">
+            <div class="modal-header">
+                <div class="modal-title" style="font-weight: 400;" data-i18n="modal_gas_title">Apps Script 専用コード</div>
+                <button class="btn-icon" id="btn-close-gas-modal" style="width: 28px; height: 28px;">&times;</button>
+            </div>
+            <div style="font-size: 0.75rem; color: #718096; margin-bottom: 10px;" data-i18n="modal_gas_desc">
+                下記をコピーしてスプレッドシートのApps Scriptエディタに貼り付けてください。
+            </div>
+            <textarea id="textarea-gas-source" class="font-mono" style="flex: 1; width: 100%; padding: 10px; font-size: 0.72rem; line-height: 1.4; border-radius: 10px; border: 1px solid rgba(0,0,0,0.15); background: #2D3748; color: #E2E8F0; resize: none;" readonly></textarea>
+            <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                <button class="btn-text-small" id="btn-copy-gas-source" style="padding: 8px 16px; font-size: 0.82rem; background: #3182CE; color: #FFFFFF; border-color: #3182CE;" data-i18n="btn_copy_gas">
+                    クリップボードにコピー
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        const FULL_GAS_SOURCE_CODE = `const SHEET_LOGS = 'Logs';
+const SHEET_CONFIG = 'Settings';
+const HEADER_LOGS = ['sync_key_hash', 'log_date', 'minutes', 'updated_at'];
+const HEADER_CONFIG = ['sync_key_hash', 'config_json', 'updated_at'];
+
+function doGet(e) {
+  const params = e.parameter || {};
+  const callback = sanitizeCallback_(params.callback || 'callback');
+  let result;
+  try {
+    getSheet_(SHEET_LOGS, HEADER_LOGS);
+    getSheet_(SHEET_CONFIG, HEADER_CONFIG);
+
+    const action = params.action || 'get';
+    const syncKeyHash = String(params.syncKeyHash || '');
+    if (!syncKeyHash || syncKeyHash.length < 32) {
+      throw new Error('共有キーが不正です。');
+    }
+    if (action === 'get') {
+      result = { ok: true, logs: getLogs_(syncKeyHash), config: getConfig_(syncKeyHash) };
+    } else if (action === 'increment') {
+      const logDate = normalizeDate_(params.logDate);
+      const minutes = Number(params.minutes || 0);
+      incrementLog_(syncKeyHash, logDate, minutes);
+      result = { ok: true };
+    } else if (action === 'reset') {
+      resetLogs_(syncKeyHash);
+      result = { ok: true };
+    } else if (action === 'saveConfig') {
+      const configJson = String(params.configJson || '{}');
+      saveConfig_(syncKeyHash, configJson);
+      result = { ok: true };
+    } else {
+      throw new Error('不明な操作です。');
+    }
+  } catch (error) {
+    result = { ok: false, error: error && error.message ? error.message : String(error) };
+  }
+  return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ');')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function getSheet_(name, headers) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('スプレッドシートに紐づいたApps Scriptとして作成してください。');
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  const firstRow = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  const hasHeader = headers.every((n, i) => firstRow[i] === n);
+  if (!hasHeader) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getConfig_(syncKeyHash) {
+  const sheet = getSheet_(SHEET_CONFIG, HEADER_CONFIG);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const values = sheet.getRange(2, 1, lastRow - 1, HEADER_CONFIG.length).getValues();
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (String(values[i][0]) === syncKeyHash) {
+      return String(values[i][1] || '{}');
+    }
+  }
+  return null;
+}
+
+function saveConfig_(syncKeyHash, configJson) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const sheet = getSheet_(SHEET_CONFIG, HEADER_CONFIG);
+    const lastRow = sheet.getLastRow();
+    const now = new Date();
+    if (lastRow >= 2) {
+      const values = sheet.getRange(2, 1, lastRow - 1, HEADER_CONFIG.length).getValues();
+      for (let i = 0; i < values.length; i++) {
+        if (String(values[i][0]) === syncKeyHash) {
+          sheet.getRange(i + 2, 2).setValue(configJson);
+          sheet.getRange(i + 2, 3).setValue(now);
+          return;
+        }
+      }
+    }
+    sheet.appendRow([syncKeyHash, configJson, now]);
+  } finally { lock.releaseLock(); }
+}
+
+function getLogs_(syncKeyHash) {
+  const sheet = getSheet_(SHEET_LOGS, HEADER_LOGS);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const values = sheet.getRange(2, 1, lastRow - 1, HEADER_LOGS.length).getValues();
+  const logs = [];
+  values.forEach(row => {
+    if (String(row[0]) !== syncKeyHash) return;
+    logs.push({
+      log_date: normalizeDate_(row[1]),
+      minutes: Number(row[2]) || 0,
+      updated_at: formatDateTime_(row[3])
+    });
+  });
+  logs.sort((a, b) => a.log_date.localeCompare(b.log_date));
+  return logs;
+}
+
+function incrementLog_(syncKeyHash, logDate, minutes) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(logDate)) throw new Error('日付が不正です。');
+  if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 720) throw new Error('分数が不正です。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const sheet = getSheet_(SHEET_LOGS, HEADER_LOGS);
+    const lastRow = sheet.getLastRow();
+    const now = new Date();
+    if (lastRow >= 2) {
+      const values = sheet.getRange(2, 1, lastRow - 1, HEADER_LOGS.length).getValues();
+      for (let i = 0; i < values.length; i++) {
+        const row = values[i];
+        if (String(row[0]) === syncKeyHash && normalizeDate_(row[1]) === logDate) {
+          const currentMinutes = Number(row[2]) || 0;
+          sheet.getRange(i + 2, 3).setValue(currentMinutes + minutes);
+          sheet.getRange(i + 2, 4).setValue(now);
+          return;
+        }
+      }
+    }
+    sheet.appendRow([syncKeyHash, logDate, minutes, now]);
+  } finally { lock.releaseLock(); }
+}
+
+function resetLogs_(syncKeyHash) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const sheet = getSheet_(SHEET_LOGS, HEADER_LOGS);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    const values = sheet.getRange(2, 1, lastRow - 1, HEADER_LOGS.length).getValues();
+    for (let i = values.length - 1; i >= 0; i--) {
+      if (String(values[i][0]) === syncKeyHash) sheet.deleteRow(i + 2);
+    }
+  } finally { lock.releaseLock(); }
+}
+
+function normalizeDate_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const text = String(value || '').trim();
+  const match = text.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/);
+  if (!match) return text;
+  return match[1] + '-' + String(Number(match[2])).padStart(2, '0') + '-' + String(Number(match[3])).padStart(2, '0');
+}
+
+function formatDateTime_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ssXXX");
+  return String(value || '');
+}
+
+function sanitizeCallback_(callback) {
+  const text = String(callback || 'callback');
+  return /^[a-zA-Z_$][0-9a-zA-Z_$\\.]*$/.test(text) ? text : 'callback';
+}`;
+
+        const FONT_MAP = {
+            'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            'noto-sans': '"Noto Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            'zen-maru': '"Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif',
+            'noto-serif': '"Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif',
+            'roboto-mono': '"Roboto Mono", Menlo, Consolas, monospace',
+            'ud-kyokasho': '"UD デジタル 教科書体 N-R", "UDDigiKyokashoN-R", "BIZ UDPゴシック", "Yu Gothic", sans-serif'
+        };
+
+        const DEFAULT_CONFIG = {
+            workMins: 50,
+            breakMins: 10,
+            autoStart: true,
+            soundEnabled: true,
+            soundType: 'chime',
+            lang: 'ja',
+            timezone: 'Asia/Tokyo',
+            startOnMonday: true,
+            fontFamily: 'system',
+            fontScale: '100',
+            workColor: '#D1EAF5',
+            breakColor: '#E6F2D6',
+            textColor: '#1A202C',
+            gasUrl: '',
+            syncKey: '',
+            cycle: 1, // サイクル数初期値
+            syncPanelOpen: false
+        };
+
+        const safeStorage = {
+            get(key) {
+                try { return localStorage.getItem(key); }
+                catch (e) { return window._fallbackStore ? window._fallbackStore[key] : null; }
+            },
+            set(key, val) {
+                try { localStorage.setItem(key, val); }
+                catch (e) {
+                    if (!window._fallbackStore) window._fallbackStore = {};
+                    window._fallbackStore[key] = val;
+                }
+            },
+            remove(key) {
+                try { localStorage.removeItem(key); }
+                catch (e) { if (window._fallbackStore) delete window._fallbackStore[key]; }
+            }
+        };
+
+        // 8ヶ国語対応・国際化辞書（サイクル数cycle_num完全翻訳対応）
+        const I18N = {
+            ja: {
+                app_title: 'サクポモ-サクッとポモドーロタイマー', app_title_short: 'サクポモ', nav_timer: 'タイマー', nav_records: '集中記録', nav_settings: '設定',
+                focus_time: '集中時間', break_time: '休憩時間', btn_start: 'スタート', btn_pause: '一時停止', min: '分',
+                preset_25: '25分集中<br>5分休憩', preset_50: '50分集中<br>10分休憩', cal_total_time: '今月の集中時間',
+                cal_total_days: '集中した日数', day_unit: '日', btn_jump_today: '今日に戻る', weekdays: ['日', '月', '火', '水', '木', '金', '土'],
+                card_timer: 'タイマー動作設定', label_def_work: '標準の集中時間', sub_def: '起動時・リセット時のデフォルト',
+                label_def_break: '標準の休憩時間', label_auto_start: '自動スタート', sub_auto_start: '集中・休憩が切り替わった時に自動で開始',
+                card_sync: 'クラウド同期設定 (上級者向け)', label_gas_url: 'Apps Script URL', label_sync_key: '共有キー', sync_key_ph: '共有キーを入力',
+                btn_gen_key: '自動生成', btn_show: '表示', btn_hide: '隠す', status_no_sync: '最終同期: なし',
+                btn_sync_now: '今すぐ記録と設定を同期する', card_color: 'カラー設定', label_themes: 'ワンタッチおすすめテーマ',
+                theme_pastel: '標準パステル', theme_dark: 'シックダーク', theme_latte: 'カフェラテ', label_work_col: '集中時間のカラー',
+                label_break_col: '休憩時間のカラー', label_text_col: '文字カラー', btn_reset: 'リセット', card_sound: 'サウンド設定',
+                sound_notice: '※サウンドが鳴らない場合は、端末の消音モード（マナーモード）の解除をしてください。', label_sound_on: 'サウンド通知',
+                sub_sound_on: '終了時にアラーム音を再生', btn_test_sound: 'テスト再生', label_sound_type: 'アラーム音の種類',
+                sub_sound_type: '音色の切り替え', sound_chime: 'チャイム (定番2音)', sound_wood: 'ウッドブロック (軽快)',
+                sound_bell: 'ヒーリングベル (余韻長め)', card_lang: '言語設定 (Language)', label_lang: '表示言語', sub_lang: 'アプリの言語切り替え',
+                label_tz: 'タイムゾーン', sub_tz: '時刻表示の地域基準', cycle_num: '{n}サイクル目',
+                card_font: 'フォント設定', label_font: 'アプリ全体のフォント', sub_font: '文字・数字のデザイン変更',
+                font_sys: 'システム標準 (デフォルト)', font_noto: 'Noto Sans', font_maru: 'Zen Maru Gothic (丸ゴシック)',
+                font_serif: 'Noto Serif JP (明朝体)', font_mono: 'Roboto Mono (等幅モノスペース)', font_ud: 'UDデジタル教科書体',
+                card_scale: '文字サイズ設定', label_scale: 'アプリ全体の文字サイズ', sub_scale: '見やすさの拡大・縮小スケール',
+                scale_100: '標準 (100% / デフォルト)', scale_110: '少し大きめ (110%)', scale_120: '大きめ (120%)', scale_90: '少し小さめ (90%)',
+                card_cal: 'カレンダー設定', label_start_day: '週の始まり', sub_start_day: 'カレンダーの左端に来る曜日',
+                day_mon: '月曜始まり', day_sun: '日曜始まり', modal_rec_desc: 'この日の集中合計時間（分）を手動で編集・追加できます。',
+                btn_del_rec: '記録を削除', btn_save_rec: '保存する', modal_gas_title: 'Apps Script 専用コード',
+                modal_gas_desc: '下記をコピーしてスプレッドシートのApps Scriptエディタに貼り付けてください。', btn_copy_gas: 'クリップボードにコピー',
+                sync_desc: 'Googleスプレッドシートを用いて複数端末間で集中記録と設定を同期できます。<br>【使い方】<br>1. Googleスプレッドシートを新規作成し、拡張機能からApps Scriptを開いて<span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">専用コード</span>を配置します。<br>2. 「デプロイ」よりウェブアプリとして導入し、発行されたURLと任意の共有キー（自動生成も可能）を下記に入力してください。<br><span style="font-size: 0.72rem; color: #E53E3E;">※Apps Scriptの作成・デプロイ作業はPCでの操作を推奨いたします。</span>'
+            },
+            en: {
+                app_title: 'SakuPomo - Simple Pomodoro', app_title_short: 'SakuPomo', nav_timer: 'Timer', nav_records: 'Records', nav_settings: 'Settings',
+                focus_time: 'Work Time', break_time: 'Break Time', btn_start: 'Start', btn_pause: 'Pause', min: 'min',
+                preset_25: '25m Work<br>5m Break', preset_50: '50m Work<br>10m Break', cal_total_time: 'Monthly Focus',
+                cal_total_days: 'Days Focused', day_unit: 'days', btn_jump_today: 'Back to Today', weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                card_timer: 'Timer Behavior', label_def_work: 'Default Work Time', sub_def: 'Default on startup & reset',
+                label_def_break: 'Default Break Time', label_auto_start: 'Auto Start Next', sub_auto_start: 'Automatically start next session',
+                card_sync: 'Cloud Sync (Advanced)', label_gas_url: 'Apps Script URL', label_sync_key: 'Sync Key', sync_key_ph: 'Enter sync key',
+                btn_gen_key: 'Generate', btn_show: 'Show', btn_hide: 'Hide', status_no_sync: 'Last Sync: None',
+                btn_sync_now: 'Sync Records & Settings Now', card_color: 'Color Settings', label_themes: 'Recommended Themes',
+                theme_pastel: 'Pastel', theme_dark: 'Dark', theme_latte: 'Latte', label_work_col: 'Work Color',
+                label_break_col: 'Break Color', label_text_col: 'Text Color', btn_reset: 'Reset', card_sound: 'Sound Settings',
+                sound_notice: '* If there is no sound, please disable Silent/Mute mode on your device.', label_sound_on: 'Sound Effect',
+                sub_sound_on: 'Play chime at end of session', btn_test_sound: 'Test Play', label_sound_type: 'Sound Type',
+                sub_sound_type: 'Choose tone', sound_chime: 'Chime (Classic 2-tone)', sound_wood: 'Woodblock (Crisp)',
+                sound_bell: 'Healing Bell (Long)', card_lang: 'Language Settings (Language)', label_lang: 'Language', sub_lang: 'App interface language',
+                label_tz: 'Timezone', sub_tz: 'Regional clock standard', cycle_num: 'Cycle #{n}',
+                card_font: 'Typography', label_font: 'Font Family', sub_font: 'Change text appearance',
+                font_sys: 'System UI (Default)', font_noto: 'Noto Sans', font_maru: 'Rounded Gothic',
+                font_serif: 'Serif (Elegant)', font_mono: 'Monospace (Digital)', font_ud: 'UD Textbook',
+                card_scale: 'Text Scale', label_scale: 'Interface Text Size', sub_scale: 'Scale UI elements',
+                scale_100: 'Normal (100% Default)', scale_110: 'Medium (110%)', scale_120: 'Large (120%)', scale_90: 'Small (90%)',
+                card_cal: 'Calendar Settings', label_start_day: 'First Day of Week', sub_start_day: 'Leftmost day in grid',
+                day_mon: 'Monday', day_sun: 'Sunday', modal_rec_desc: 'Manually edit or add total focused minutes for this date.',
+                btn_del_rec: 'Delete Log', btn_save_rec: 'Save Log', modal_gas_title: 'Apps Script Backend Code',
+                modal_gas_desc: 'Copy and paste this into your Google Spreadsheet Script Editor.', btn_copy_gas: 'Copy to Clipboard',
+                sync_desc: 'Sync records & settings across devices using Google Sheets.<br>[How to use]<br>1. Create a Google Sheet, open Apps Script from Extensions, and paste the <span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">Backend Code</span>.<br>2. Deploy as a Web App, then enter the deployed URL and any sync key (auto-generation available) below.<br><span style="font-size: 0.72rem; color: #E53E3E;">* We recommend performing Apps Script setup on a PC.</span>'
+            },
+            zh: {
+                app_title: '极简番茄钟', app_title_short: 'SakuPomo', nav_timer: '计时器', nav_records: '记录', nav_settings: '设置',
+                focus_time: '专注时长', break_time: '休息时长', btn_start: '开始', btn_pause: '暂停', min: '分钟',
+                preset_25: '25分专注<br>5分休息', preset_50: '50分专注<br>10分休息', cal_total_time: '本月专注总长',
+                cal_total_days: '专注天数', day_unit: '天', btn_jump_today: '回到今天', weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+                card_timer: '计时设置', label_def_work: '默认专注时长', sub_def: '启动和重置时的初始值',
+                label_def_break: '默认休息时长', label_auto_start: '自动开始', sub_auto_start: '阶段结束时自动计时',
+                card_sync: '云同步设置 (高级)', label_gas_url: '脚本后端网址', label_sync_key: '同步密钥', sync_key_ph: '输入同步密钥',
+                btn_gen_key: '随机生成', btn_show: '显示', btn_hide: '隐藏', status_no_sync: '最后同步: 无',
+                btn_sync_now: '立即同步记录和设置', card_color: '外观配色', label_themes: '推荐配色主题',
+                theme_pastel: '默认柔和', theme_dark: '深色沉浸', theme_latte: '拿铁咖啡', label_work_col: '专注背景色',
+                label_break_col: '休息背景色', label_text_col: '文字颜色', btn_reset: '重置', card_sound: '声音设置',
+                sound_notice: '* 如果没有声音，请确保您的设备未开启静音或勿扰模式。', label_sound_on: '结束提示音',
+                sub_sound_on: '计时结束时播放音效', btn_test_sound: '试听', label_sound_type: '音效类型',
+                sub_sound_type: '切换提示音风格', sound_chime: '经典双铃声', sound_wood: '清脆木鱼声',
+                sound_bell: '悠长舒缓钵音', card_lang: '语言设置 (Language)', label_lang: '显示语言', sub_lang: '切换界面语言',
+                label_tz: '时区标准', sub_tz: '时钟区域基准', cycle_num: '第 {n} 轮次',
+                card_font: '字体设置', label_font: '全局字体', sub_font: '更换文字样式',
+                font_sys: '系统默认', font_noto: '思源黑体', font_maru: '圆体',
+                font_serif: '明朝宋体', font_mono: '等宽数码字体', font_ud: '教科书体',
+                card_scale: '文字大小', label_scale: '界面缩放比', sub_scale: '调整界面字号',
+                scale_100: '标准 (100%)', scale_110: '稍大 (110%)', scale_120: '大号 (120%)', scale_90: '稍小 (90%)',
+                card_cal: '日历设置', label_start_day: '一周起始日', sub_start_day: '日历左侧第一列曜日',
+                day_mon: '周一', day_sun: '周日', modal_rec_desc: '您可以手动添加或修改此日期的专注总时长。',
+                btn_del_rec: '删除记录', btn_save_rec: '保存记录', modal_gas_title: '后端部署代码',
+                modal_gas_desc: '请将以下代码复制并粘贴到 Google 表格脚本编辑器中。', btn_copy_gas: '复制代码',
+                sync_desc: '使用 Google 表格跨设备同步专注记录和设置。<br>【使用方法】<br>1. 新建 Google 表格，从扩展程序打开 Apps Script 并粘贴<span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">专属代码</span>。<br>2. 作为网页应用部署，在下方粘贴网址和任意同步密钥（支持自动生成）。<br><span style="font-size: 0.72rem; color: #E53E3E;">※建议在电脑上进行 Apps Script 的创建与部署操作。</span>'
+            },
+            es: {
+                app_title: 'Pomodoro Simple', app_title_short: 'SakuPomo', nav_timer: 'Temporizador', nav_records: 'Registros', nav_settings: 'Ajustes',
+                focus_time: 'Enfoque', break_time: 'Descanso', btn_start: 'Iniciar', btn_pause: 'Pausar', min: 'min',
+                preset_25: '25m Enfoque<br>5m Descanso', preset_50: '50m Enfoque<br>10m Descanso', cal_total_time: 'Enfoque Mensual',
+                cal_total_days: 'Días Enfocados', day_unit: 'días', btn_jump_today: 'Volver a Hoy', weekdays: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+                card_timer: 'Comportamiento', label_def_work: 'Enfoque Predeterminado', sub_def: 'Valor al iniciar y reiniciar',
+                label_def_break: 'Descanso Predeterminado', label_auto_start: 'Inicio Automático', sub_auto_start: 'Iniciar sesión automáticamente',
+                card_sync: 'Sinc en Nube', label_gas_url: 'URL Apps Script', label_sync_key: 'Clave Sinc', sync_key_ph: 'Introduzca clave',
+                btn_gen_key: 'Generar', btn_show: 'Mostrar', btn_hide: 'Ocultar', status_no_sync: 'Última Sinc: Ninguna',
+                btn_sync_now: 'Sincronizar Ahora', card_color: 'Colores', label_themes: 'Temas Prontos',
+                theme_pastel: 'Pastel', theme_dark: 'Oscuro', theme_latte: 'Café Latte', label_work_col: 'Color Enfoque',
+                label_break_col: 'Color Descanso', label_text_col: 'Color Texto', btn_reset: 'Restablecer', card_sound: 'Sonido',
+                sound_notice: '* Si no escucha sonido, desactive el modo Silencio en su dispositivo.', label_sound_on: 'Notificación Sonido',
+                sub_sound_on: 'Reproducir sonido al finalizar', btn_test_sound: 'Probar', label_sound_type: 'Tipo Sonido',
+                sub_sound_type: 'Seleccionar tono', sound_chime: 'Campana (Clásico)', sound_wood: 'Bloque Madera',
+                sound_bell: 'Cuenco Tibetano (Largo)', card_lang: 'Idioma (Language)', label_lang: 'Idioma', sub_lang: 'Idioma de la interfaz',
+                label_tz: 'Zona Horaria', sub_tz: 'Estándar regional', cycle_num: 'Ciclo #{n}',
+                card_font: 'Tipografía', label_font: 'Fuente', sub_font: 'Estilo de texto',
+                font_sys: 'Sistema (Défault)', font_noto: 'Noto Sans', font_maru: 'Góticas Redondeadas',
+                font_serif: 'Serif (Elegante)', font_mono: 'Monospaciado', font_ud: 'Libro de Texto UD',
+                card_scale: 'Tamaño de Texto', label_scale: 'Escala de Texto', sub_scale: 'Aumentar o reducir texto',
+                scale_100: 'Normal (100%)', scale_110: 'Mediano (110%)', scale_120: 'Grande (120%)', scale_90: 'Pequeño (90%)',
+                card_cal: 'Calendario', label_start_day: 'Primer Día Semana', sub_start_day: 'Columna izquierda',
+                day_mon: 'Lunes', day_sun: 'Domingo', modal_rec_desc: 'Editar o añadir manualmente minutos enfocados para esta fecha.',
+                btn_del_rec: 'Eliminar', btn_save_rec: 'Guardar', modal_gas_title: 'Código Apps Script',
+                modal_gas_desc: 'Copie y pegue esto en el Editor de Google Sheets.', btn_copy_gas: 'Copiar',
+                sync_desc: 'Sincronice registros y ajustes entre dispositivos usando Google Sheets.<br>[Uso]<br>1. Cree una hoja de Google, abra Apps Script desde Extensiones y pegue el <span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">Código</span>.<br>2. Despliegue como aplicación web, e introduzca la URL y cualquier clave de sinc (generación disponible) abajo.<br><span style="font-size: 0.72rem; color: #E53E3E;">* Recomendamos realizar la configuración de Apps Script en una PC.</span>'
+            },
+            pt: {
+                app_title: 'Pomodoro Simples', app_title_short: 'SakuPomo', nav_timer: 'Timer', nav_records: 'Registros', nav_settings: 'Ajustes',
+                focus_time: 'Foco', break_time: 'Pausa', btn_start: 'Iniciar', btn_pause: 'Pausar', min: 'min',
+                preset_25: '25m Foco<br>5m Pausa', preset_50: '50m Foco<br>10m Pausa', cal_total_time: 'Tempo Mensal',
+                cal_total_days: 'Dias com Foco', day_unit: 'dias', btn_jump_today: 'Voltar para Hoje', weekdays: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                card_timer: 'Temporizador', label_def_work: 'Tempo Foco Padrão', sub_def: 'Padrão ao abrir e resetar',
+                label_def_break: 'Tempo Pausa Padrão', label_auto_start: 'Início Automático', sub_auto_start: 'Iniciar próxima etapa automaticamente',
+                card_sync: 'Sincronização Nuvem', label_gas_url: 'URL Apps Script', label_sync_key: 'Chave Sinc', sync_key_ph: 'Digite a chave',
+                btn_gen_key: 'Gerar', btn_show: 'Mostrar', btn_hide: 'Ocultar', status_no_sync: 'Última Sinc: Nenhuma',
+                btn_sync_now: 'Sincronizar Agora', card_color: 'Cores', label_themes: 'Temas Prontos',
+                theme_pastel: 'Pastel', theme_dark: 'Escuro', theme_latte: 'Café Latte', label_work_col: 'Cor Foco',
+                label_break_col: 'Cor Pausa', label_text_col: 'Cor Texto', btn_reset: 'Resetar', card_sound: 'Sons',
+                sound_notice: '* Se não houver som, desative o modo Silencioso do seu aparelho.', label_sound_on: 'Alerta Sonoro',
+                sub_sound_on: 'Tocar som ao terminar', btn_test_sound: 'Testar', label_sound_type: 'Tipo de Som',
+                sub_sound_type: 'Escolher tom', sound_chime: 'Sino (Clássico)', sound_wood: 'Bloco Madeira',
+                sound_bell: 'Taça Tibetana (Longo)', card_lang: 'Idioma (Language)', label_lang: 'Idioma', sub_lang: 'Idioma do aplicativo',
+                label_tz: 'Fuso Horário', sub_tz: 'Relógio regional padrão', cycle_num: 'Ciclo #{n}',
+                card_font: 'Tipografia', label_font: 'Fonte', sub_font: 'Aparência das letras',
+                font_sys: 'Sistema (Padrão)', font_noto: 'Noto Sans', font_maru: 'Arredondada',
+                font_serif: 'Serifada', font_mono: 'Monospace (Digital)', font_ud: 'Didática UD',
+                card_scale: 'Tamanho Fonte', label_scale: 'Escala Letras', sub_scale: 'Aumentar ou diminuir textos',
+                scale_100: 'Normal (100%)', scale_110: 'Médio (110%)', scale_120: 'Grande (120%)', scale_90: 'Pequeno (90%)',
+                card_cal: 'Calendário', label_start_day: 'Início Semana', sub_start_day: 'Primeira coluna à esquerda',
+                day_mon: 'Segunda-feira', day_sun: 'Domingo', modal_rec_desc: 'Editar ou adicionar manualmente os minutos de foco deste dia.',
+                btn_del_rec: 'Excluir', btn_save_rec: 'Salvar', modal_gas_title: 'Código Apps Script',
+                modal_gas_desc: 'Copie e cole isto no Editor de Scripts da sua planilha Google.', btn_copy_gas: 'Copiar',
+                sync_desc: 'Sincronize registros e configurações entre dispositivos usando o Google Planilhas.<br>[Como usar]<br>1. Crie uma planilha, abra o Apps Script em Extensões e cole o <span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">Código</span>.<br>2. Implante como aplicativo web e insira a URL e qualquer chave (geração automática disponível) abaixo.<br><span style="font-size: 0.72rem; color: #E53E3E;">* Recomendamos fazer a configuração do Apps Script no PC.</span>'
+            },
+            ko: {
+                app_title: '심플 포모도로 타이머', app_title_short: '사쿠포모', nav_timer: '타이머', nav_records: '집중 기록', nav_settings: '설정',
+                focus_time: '집중 시간', break_time: '휴식 시간', btn_start: '시작', btn_pause: '일시정지', min: '분',
+                preset_25: '25분 집중<br>5분 휴식', preset_50: '50분 집중<br>10분 휴식', cal_total_time: '이달의 집중 시간',
+                cal_total_days: '집중한 일수', day_unit: '일', btn_jump_today: '오늘로 이동', weekdays: ['일', '월', '화', '수', '목', '금', '토'],
+                card_timer: '타이머 동작 설정', label_def_work: '기본 집중 시간', sub_def: '시작 및 초기화 기본값',
+                label_def_break: '기본 휴식 시간', label_auto_start: '자동 시작', sub_auto_start: '세션 전환 시 자동으로 타이머 시작',
+                card_sync: '클라우드 동기화', label_gas_url: 'Apps Script URL', label_sync_key: '공유 키', sync_key_ph: '공유 키 입력',
+                btn_gen_key: '자동 생성', btn_show: '표시', btn_hide: '숨기기', status_no_sync: '최종 동기화: 없음',
+                btn_sync_now: '지금 기록 및 설정 동기화', card_color: '컬러 설정', label_themes: '추천 컬러 테마',
+                theme_pastel: '파스텔', theme_dark: '시크 다크', theme_latte: '카페 라테', label_work_col: '집중 배경색',
+                label_break_col: '휴식 배경색', label_text_col: '글자 색상', btn_reset: '초기화', card_sound: '사운드 설정',
+                sound_notice: '* 소리가 나지 않으면 기기의 무음/진동 모드를 해제해주세요.', label_sound_on: '사운드 알림',
+                sub_sound_on: '완료 시 차임벨 재생', btn_test_sound: '테스트 재생', label_sound_type: '알림음 종류',
+                sub_sound_type: '음색 변경', sound_chime: '차임 (기본 2음)', sound_wood: '우드블록 (경쾌함)',
+                sound_bell: '힐링 벨 (긴 여운)', card_lang: '언어 설정 (Language)', label_lang: '표시 언어', sub_lang: '앱 인터페이스 언어',
+                label_tz: '타임존', sub_tz: '시간 표시 지역 기준', cycle_num: '{n}사이클',
+                card_font: '폰트 설정', label_font: '전체 폰트', sub_font: '글자 스타일 변경',
+                font_sys: '시스템 기본', font_noto: '본고딕 (Noto Sans)', font_maru: '둥근 고딕',
+                font_serif: '명조체', font_mono: '고정폭 디지털 폰트', font_ud: '교과서체',
+                card_scale: '글자 크기 설정', label_scale: '화면 텍스트 크기', sub_scale: 'UI 글자 확대/축소 스케일',
+                scale_100: '표준 (100% 기본)', scale_110: '약간 크게 (110%)', scale_120: '크게 (120%)', scale_90: '약간 작게 (90%)',
+                card_cal: '캘린더 설정', label_start_day: '한 주 시작 요일', sub_start_day: '달력 왼쪽 첫 요일',
+                day_mon: '월요일 시작', day_sun: '일요일 시작', modal_rec_desc: '이 날짜의 집중 총 시간(분)을 직접 수정하거나 추가할 수 있습니다.',
+                btn_del_rec: '기록 삭제', btn_save_rec: '저장하기', modal_gas_title: 'Apps Script 백엔드 코드',
+                modal_gas_desc: '아래 코드를 복사하여 구글 스프레드시트의 스크립트 편집기에 붙여넣으세요.', btn_copy_gas: '클립보드에 복사',
+                sync_desc: '구글 스프레드시트를 통해 여러 기기 간에 집중 기록과 설정을 동기화할 수 있습니다.<br>[사용법]<br>1. 구글 스프레드시트를 새로 만들고 확장 프로그램에서 Apps Script를 열어 <span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">전용 코드</span>를 붙여넣습니다.<br>2. 웹 앱으로 배포한 후 발급된 URL과 원하는 공유 키(자동 생성 가능)를 아래에 입력하세요.<br><span style="font-size: 0.72rem; color: #E53E3E;">※Apps Script 생성 및 배포 작업은 PC 환경을 권장합니다.</span>'
+            },
+            fr: {
+                app_title: 'Minuteur Pomodoro Simple', app_title_short: 'SakuPomo', nav_timer: 'Minuteur', nav_records: 'Historique', nav_settings: 'Paramètres',
+                focus_time: 'Concentration', break_time: 'Pause', btn_start: 'Démarrer', btn_pause: 'Pause', min: 'min',
+                preset_25: '25m Travail<br>5m Pause', preset_50: '50m Travail<br>10m Pause', cal_total_time: 'Concentration Mensuelle',
+                cal_total_days: 'Jours Actifs', day_unit: 'jours', btn_jump_today: "Aujourd'hui", weekdays: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+                card_timer: 'Minuteur', label_def_work: 'Concentration par défaut', sub_def: 'Valeur au démarrage et reset',
+                label_def_break: 'Pause par défaut', label_auto_start: 'Démarrage Automatique', sub_auto_start: 'Lancer l’étape suivante automatiquement',
+                card_sync: 'Sync Cloud (Avancé)', label_gas_url: 'URL Apps Script', label_sync_key: 'Clé de Sync', sync_key_ph: 'Entrez la clé',
+                btn_gen_key: 'Générer', btn_show: 'Afficher', btn_hide: 'Masquer', status_no_sync: 'Dernière Sync: Aucune',
+                btn_sync_now: 'Synchroniser Maintenant', card_color: 'Couleurs', label_themes: 'Thèmes Prêts',
+                theme_pastel: 'Pastel', theme_dark: 'Sombre', theme_latte: 'Café Latte', label_work_col: 'Couleur Travail',
+                label_break_col: 'Couleur Pause', label_text_col: 'Couleur Texte', btn_reset: 'Réinitialiser', card_sound: 'Sons',
+                sound_notice: '* Si aucun son n’est émis, désactivez le mode Silencieux de votre appareil.', label_sound_on: 'Alerte Sonore',
+                sub_sound_on: 'Jouer un son à la fin', btn_test_sound: 'Tester', label_sound_type: 'Type de Son',
+                sub_sound_type: 'Choisir la tonalité', sound_chime: 'Carillon (Classique)', sound_wood: 'Bloc de Bois',
+                sound_bell: 'Bol Tibétain (Long)', card_lang: 'Langue (Language)', label_lang: 'Langue', sub_lang: 'Langue de l’interface',
+                label_tz: 'Fuseau Horaire', sub_tz: 'Heure régionale standard', cycle_num: 'Cycle #{n}',
+                card_font: 'Typographie', label_font: 'Police', sub_font: 'Apparence du texte',
+                font_sys: 'Système (Défaut)', font_noto: 'Noto Sans', font_maru: 'Arrondie',
+                font_serif: 'Serif (Élégant)', font_mono: 'Monospace (Digital)', font_ud: 'Manuel UD',
+                card_scale: 'Taille Texte', label_scale: 'Échelle Texte', sub_scale: 'Agrandir ou réduire textes',
+                scale_100: 'Normal (100%)', scale_110: 'Moyen (110%)', scale_120: 'Grand (120%)', scale_90: 'Petit (90%)',
+                card_cal: 'Calendrier', label_start_day: 'Début Semaine', sub_start_day: 'Première colonne à gauche',
+                day_mon: 'Lundi', day_sun: 'Dimanche', modal_rec_desc: 'Modifier ou ajouter manuellement les minutes de travail pour cette date.',
+                btn_del_rec: 'Supprimer', btn_save_rec: 'Enregistrer', modal_gas_title: 'Code Apps Script',
+                modal_gas_desc: 'Copiez-collez ceci dans l’Éditeur de Script de votre feuille Google.', btn_copy_gas: 'Copier',
+                sync_desc: 'Synchronisez vos historiques et paramètres entre appareils via Google Sheets.<br>[Mode d’emploi]<br>1. Créez une feuille Google, ouvrez Apps Script dans Extensions et collez le <span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">Code</span>.<br>2. Déployez en application web et entrez l’URL émise ainsi qu’une clé (génération auto possible) ci-dessous.<br><span style="font-size: 0.72rem; color: #E53E3E;">* Nous recommandons d’effectuer la configuration Apps Script sur PC.</span>'
+            },
+            de: {
+                app_title: 'Einfacher Pomodoro Timer', app_title_short: 'SakuPomo', nav_timer: 'Timer', nav_records: 'Statistik', nav_settings: 'Einstellungen',
+                focus_time: 'Fokuszeit', break_time: 'Pausenzeit', btn_start: 'Start', btn_pause: 'Pause', min: 'Min',
+                preset_25: '25m Fokus<br>5m Pause', preset_50: '50m Fokus<br>10m Pause', cal_total_time: 'Fokus diesen Monat',
+                cal_total_days: 'Tage fokussiert', day_unit: 'Tage', btn_jump_today: 'Heute', weekdays: ['Son', 'Mon', 'Die', 'Mit', 'Don', 'Fre', 'Sam'],
+                card_timer: 'Timer-Verhalten', label_def_work: 'Standard Fokuszeit', sub_def: 'Standard beim Start und Reset',
+                label_def_break: 'Standard Pausenzeit', label_auto_start: 'Auto-Start', sub_auto_start: 'Nächsten Phase automatisch starten',
+                card_sync: 'Cloud-Sync (Erweitert)', label_gas_url: 'Apps Script URL', label_sync_key: 'Sync-Schlüssel', sync_key_ph: 'Schlüssel eingeben',
+                btn_gen_key: 'Generieren', btn_show: 'Anzeigen', btn_hide: 'Verbergen', status_no_sync: 'Letzter Sync: Keiner',
+                btn_sync_now: 'Jetzt synchronisieren', card_color: 'Farben', label_themes: 'Empfohlene Themes',
+                theme_pastel: 'Pastell', theme_dark: 'Dunkel', theme_latte: 'Café Latte', label_work_col: 'Fokus-Farbe',
+                label_break_col: 'Pausen-Farbe', label_text_col: 'Textfarbe', btn_reset: 'Zurücksetzen', card_sound: 'Ton',
+                sound_notice: '* Wenn kein Ton zu hören ist, deaktivieren Sie bitte den Stummschaltungsmodus.', label_sound_on: 'Tonbenachrichtigung',
+                sub_sound_on: 'Gong am Ende abspielen', btn_test_sound: 'Testen', label_sound_type: 'Ton-Art',
+                sub_sound_type: 'Klang auswählen', sound_chime: 'Gong (Klassisch)', sound_wood: 'Holzblock',
+                sound_bell: 'Klangschale (Lang)', card_lang: 'Sprache (Language)', label_lang: 'Sprache', sub_lang: 'App-Sprache ändern',
+                label_tz: 'Zeitzone', sub_tz: 'Regionale Uhrzeit', cycle_num: 'Runde #{n}',
+                card_font: 'Schriftart', label_font: 'Schriftfamilie', sub_font: 'Textaussehen ändern',
+                font_sys: 'System (Standard)', font_noto: 'Noto Sans', font_maru: 'Abgerundet',
+                font_serif: 'Serif (Elegant)', font_mono: 'Monospace (Digital)', font_ud: 'UD Lehrbuch',
+                card_scale: 'Schriftgröße', label_scale: 'Textskalierung', sub_scale: 'Größe der UI-Texte',
+                scale_100: 'Normal (100%)', scale_110: 'Mittel (110%)', scale_120: 'Groß (120%)', scale_90: 'Klein (90%)',
+                card_cal: 'Kalender', label_start_day: 'Wochenanfang', sub_start_day: 'Linke Spalte im Kalender',
+                day_mon: 'Montag', day_sun: 'Sonntag', modal_rec_desc: 'Fokus-Minuten für dieses Datum manuell bearbeiten oder hinzufügen.',
+                btn_del_rec: 'Löschen', btn_save_rec: 'Speichern', modal_gas_title: 'Apps Script Quellcode',
+                modal_gas_desc: 'Kopieren Sie dies in den Skript-Editor Ihrer Google Tabelle.', btn_copy_gas: 'Kopieren',
+                sync_desc: 'Synchronisieren Sie Statistik und Einstellungen über Geräte hinweg mit Google Sheets.<br>[Anleitung]<br>1. Erstellen Sie eine Tabelle, öffnen Sie Apps Script unter Erweiterungen und fügen Sie den <span id="link-show-gas-code" style="text-decoration: underline; cursor: pointer; color: #3182CE;">Code</span> ein.<br>2. Als Web-App bereitstellen, dann die URL und einen beliebigen Schlüssel (Auto-Generierung möglich) unten eingeben.<br><span style="font-size: 0.72rem; color: #E53E3E;">* Wir empfehlen die Apps Script Einrichtung am PC.</span>'
+            }
+        };
+
+        let config = { ...DEFAULT_CONFIG };
+        let records = {};
+        
+        let currentMode = 'work';
+        let timerState = 'stopped';
+        let timeRemaining = 50 * 60;
+        let totalDuration = 50 * 60;
+        let targetEndTime = 0;
+        let timerInterval = null;
+
+        let currentCalYear = new Date().getFullYear();
+        let currentCalMonth = new Date().getMonth();
+        let currentRecordPeriod = 'month';
+        let currentRecordMode = 'list';
+        let currentRecordDate = new Date();
+
+        let selectedModalDateStr = '';
+
+        function getTodayStr() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function stableKeyHash(str) {
+            if (!str) return '';
+            let h1 = 0x811c9dc5, h2 = 0xc9dc5118, h3 = 0x1c9dc581, h4 = 0xdc5811c9;
+            for (let i = 0; i < str.length; i++) {
+                const c = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+                h2 = Math.imul(h2 ^ c, 0x01000193) >>> 0;
+                h3 = Math.imul(h3 ^ c, 0x01000193) >>> 0;
+                h4 = Math.imul(h4 ^ c, 0x01000193) >>> 0;
+            }
+            return h1.toString(16).padStart(8,'0') + 
+                   h2.toString(16).padStart(8,'0') + 
+                   h3.toString(16).padStart(8,'0') + 
+                   h4.toString(16).padStart(8,'0');
+        }
+
+        function getConfigProfileStoreKey() {
+            if (!config.gasUrl || !config.syncKey) return null;
+            return 'profile_' + stableKeyHash(config.gasUrl.trim() + '####' + config.syncKey.trim());
+        }
+
+        function applyFontToRoot(fontKey) {
+            const stack = FONT_MAP[fontKey] || FONT_MAP['system'];
+            document.documentElement.style.setProperty('--app-font', stack);
+        }
+
+        function applyFontScaleToRoot(scaleFactor) {
+            const s = parseInt(scaleFactor, 10) || 100;
+            document.documentElement.style.fontSize = s + '%';
+        }
+
+        function getCycleStr(cycleNum) {
+            const dict = I18N[config.lang] || I18N['ja'];
+            const fmt = dict.cycle_num || '{n}사이클';
+            return fmt.replace('{n}', cycleNum);
+        }
+
+        function applyLanguageToUI(langKey) {
+            const dict = I18N[langKey] || I18N['ja'];
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (dict[k]) {
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = dict[k];
+                    } else {
+                        el.innerHTML = dict[k];
+                    }
+                }
+            });
+
+            const syncContent = document.getElementById('text-sync-desc');
+            if (syncContent && dict.sync_desc) {
+                syncContent.innerHTML = dict.sync_desc;
+                const reLink = document.getElementById('link-show-gas-code');
+                const gModal = document.getElementById('gas-code-modal');
+                const gTa = document.getElementById('textarea-gas-source');
+                if (reLink && gModal && gTa) {
+                    reLink.onclick = () => { gTa.value = FULL_GAS_SOURCE_CODE; gModal.classList.add('active'); };
+                }
+            }
+
+            const p25El = document.getElementById('btn-pre-25');
+            if (p25El) p25El.innerHTML = dict.preset_25;
+            const p50El = document.getElementById('btn-pre-50');
+            if (p50El) p50El.innerHTML = dict.preset_50;
+
+            const docTitle = document.getElementById('doc-title');
+            if (docTitle && dict.app_title) docTitle.textContent = dict.app_title;
+
+            const visBtn = document.getElementById('btn-toggle-key-visibility');
+            const keyInp = document.getElementById('sync-key-input');
+            if (visBtn && keyInp) {
+                visBtn.textContent = keyInp.type === 'password' ? dict.btn_show : dict.btn_hide;
+            }
+
+            const toggleText = document.getElementById('btn-toggle-text');
+            if (toggleText) {
+                toggleText.textContent = timerState === 'running' ? (dict.btn_pause || 'Pause') : (dict.btn_start || 'Start');
+            }
+
+            const cyEl = document.getElementById('cycle-display');
+            if (cyEl) cyEl.textContent = getCycleStr(config.cycle || 1);
+
+            renderCalendar();
+            updateTimerDisplay();
+        }
+
+        function updateTheme(mode) {
+            const bgColor = mode === 'work' ? config.workColor : config.breakColor;
+            const root = document.documentElement;
+            root.style.setProperty('--bg-color', bgColor);
+            root.style.setProperty('--text-main', config.textColor || '#1A202C');
+            root.style.setProperty('--text-muted', config.textColor === '#FFFFFF' ? 'rgba(255,255,255,0.7)' : 'rgba(26,32,44,0.65)');
+
+            const wLabel = document.getElementById('label-work-color-code');
+            if (wLabel) wLabel.textContent = config.workColor;
+            const bLabel = document.getElementById('label-break-color-code');
+            if (bLabel) bLabel.textContent = config.breakColor;
+            const tLabel = document.getElementById('label-text-color-code');
+            if (tLabel) tLabel.textContent = config.textColor || '#1A202C';
+
+            const metaTheme = document.querySelector('meta[name="theme-color"]');
+            if (metaTheme) metaTheme.setAttribute('content', bgColor);
+        }
+
+        function loadStorage() {
+            try {
+                const cfgStr = safeStorage.get('pomodoro_config');
+                if (cfgStr) {
+                    const saved = JSON.parse(cfgStr);
+                    config = { ...DEFAULT_CONFIG, ...saved };
+                }
+                const recStr = safeStorage.get('pomodoro_records');
+                if (recStr) {
+                    records = JSON.parse(recStr);
+                }
+            } catch (e) {
+                console.error('Storage load error:', e);
+            }
+            applyFontToRoot(config.fontFamily);
+            applyFontScaleToRoot(config.fontScale);
+            applyLanguageToUI(config.lang);
+            applyConfigToUI();
+            updateTheme(currentMode);
+            renderCalendar();
+            updateSyncStatusUI();
+        }
+
+        function saveConfig() {
+            try {
+                safeStorage.set('pomodoro_config', JSON.stringify(config));
+                const profileStoreKey = getConfigProfileStoreKey();
+                if (profileStoreKey) {
+                    safeStorage.set(profileStoreKey, JSON.stringify(config));
+                }
+            } catch (e) { console.error('Config save error:', e); }
+        }
+
+        function saveRecords() {
+            try { safeStorage.set('pomodoro_records', JSON.stringify(records)); }
+            catch (e) { console.error('Records save error:', e); }
+            renderCalendar();
+        }
+
+        function tryRestoreConfigProfile() {
+            const profileStoreKey = getConfigProfileStoreKey();
+            if (profileStoreKey) {
+                const savedProfile = safeStorage.get(profileStoreKey);
+                if (savedProfile) {
+                    try {
+                        const parsed = JSON.parse(savedProfile);
+                        config = { ...config, ...parsed };
+                        applyFontToRoot(config.fontFamily);
+                        applyFontScaleToRoot(config.fontScale);
+                        applyLanguageToUI(config.lang);
+                        applyConfigToUI();
+                        updateTheme(currentMode);
+                    } catch(e){}
+                }
+            }
+        }
+
+        function applyConfigToUI() {
+            const workMinsEl = document.getElementById('timer-work-mins');
+            if (workMinsEl) workMinsEl.value = config.workMins;
+
+            const breakMinsEl = document.getElementById('timer-break-mins');
+            if (breakMinsEl) breakMinsEl.value = config.breakMins;
+
+            const defWorkEl = document.getElementById('setting-default-work');
+            if (defWorkEl) defWorkEl.value = config.workMins;
+
+            const defBreakEl = document.getElementById('setting-default-break');
+            if (defBreakEl) defBreakEl.value = config.breakMins;
+
+            const autoStartEl = document.getElementById('setting-auto-start');
+            if (autoStartEl) autoStartEl.checked = config.autoStart;
+
+            const soundEl = document.getElementById('setting-sound');
+            if (soundEl) soundEl.checked = config.soundEnabled;
+
+            const sTypeEl = document.getElementById('setting-sound-type');
+            if (sTypeEl) sTypeEl.value = config.soundType || 'chime';
+
+            const langEl = document.getElementById('setting-lang');
+            if (langEl) langEl.value = config.lang || 'ja';
+
+            const tzEl = document.getElementById('setting-timezone');
+            if (tzEl) tzEl.value = config.timezone || 'Asia/Tokyo';
+
+            const startDayEl = document.getElementById('setting-start-day');
+            if (startDayEl) startDayEl.value = config.startOnMonday ? 'monday' : 'sunday';
+
+            const fontEl = document.getElementById('setting-font-family');
+            if (fontEl) fontEl.value = config.fontFamily || 'system';
+
+            const scaleEl = document.getElementById('setting-font-scale');
+            if (scaleEl) scaleEl.value = config.fontScale || '100';
+
+            const workColorEl = document.getElementById('setting-work-color');
+            if (workColorEl) workColorEl.value = config.workColor;
+
+            const breakColorEl = document.getElementById('setting-break-color');
+            if (breakColorEl) breakColorEl.value = config.breakColor;
+
+            const textColorEl = document.getElementById('setting-text-color');
+            if (textColorEl) textColorEl.value = config.textColor || '#1A202C';
+
+            const urlInputEl = document.getElementById('sync-gas-url-input');
+            if (urlInputEl) urlInputEl.value = config.gasUrl || '';
+
+            const keyInputEl = document.getElementById('sync-key-input');
+            if (keyInputEl) keyInputEl.value = config.syncKey;
+
+            const cyEl = document.getElementById('cycle-display');
+            if (cyEl) cyEl.textContent = getCycleStr(config.cycle || 1);
+
+            const contentEl = document.getElementById('sync-panel-content');
+            const arrowEl = document.getElementById('sync-panel-arrow');
+            if (contentEl && arrowEl) {
+                if (config.syncPanelOpen) {
+                    contentEl.classList.remove('hidden');
+                    arrowEl.textContent = '－';
+                } else {
+                    contentEl.classList.add('hidden');
+                    arrowEl.textContent = '＋';
+                }
+            }
+
+            if (timerState === 'stopped') {
+                switchMode(currentMode, false);
+            }
+        }
+
+        function recordPartialWork() {
+            if (currentMode === 'work' && (timerState === 'running' || timerState === 'paused')) {
+                const elapsedSec = totalDuration - timeRemaining;
+                const elapsedMins = Math.floor(elapsedSec / 60);
+                if (elapsedMins > 0) {
+                    const today = getTodayStr();
+                    records[today] = (records[today] || 0) + elapsedMins;
+                    saveRecords();
+                    if (config.syncKey && config.gasUrl) {
+                        const hashed = stableKeyHash(config.syncKey);
+                        execJSONP({
+                            action: 'increment',
+                            syncKeyHash: hashed,
+                            logDate: today,
+                            minutes: elapsedMins
+                        }).catch(e => {});
+                    }
+                    showToast(config.lang === 'en' ? `Recorded +${elapsedMins}m partial focus` : `途中の集中記録（+${elapsedMins}分）を保存しました`);
+                }
+            }
+        }
+
+        function switchMode(mode, autoStartNext = false) {
+            recordPartialWork();
+            currentMode = mode;
+            const mins = mode === 'work' ? config.workMins : config.breakMins;
+            totalDuration = mins * 60;
+            timeRemaining = totalDuration;
+
+            updateTheme(mode);
+            updateTimerDisplay();
+
+            if (autoStartNext) {
+                startTimer();
+            } else {
+                pauseTimer(true);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const timeEl = document.getElementById('time-display');
+            if (timeEl) timeEl.textContent = formatTime(timeRemaining);
+            
+            const progressCircle = document.getElementById('timer-progress');
+            if (progressCircle) {
+                const circumference = 816.8;
+                const fraction = totalDuration > 0 ? (timeRemaining / totalDuration) : 0;
+                const offset = circumference * (1 - fraction);
+                progressCircle.style.strokeDashoffset = offset;
+            }
+
+            const dict = I18N[config.lang] || I18N['ja'];
+
+            const nowEl = document.getElementById('text-clock-now');
+            const endEl = document.getElementById('text-clock-end');
+            if (nowEl && endEl) {
+                const nowD = new Date();
+                const tz = config.timezone || 'Asia/Tokyo';
+                try {
+                    nowEl.textContent = `${nowD.toLocaleTimeString(config.lang === 'ja' ? 'ja-JP' : 'en-US', {timeZone: tz, hour:'2-digit', minute:'2-digit'})}`;
+                    let targetEndStamp = Date.now() + (timeRemaining * 1000);
+                    if (timerState === 'running') targetEndStamp = targetEndTime;
+                    const endD = new Date(targetEndStamp);
+                    endEl.textContent = `〜${endD.toLocaleTimeString(config.lang === 'ja' ? 'ja-JP' : 'en-US', {timeZone: tz, hour:'2-digit', minute:'2-digit'})}`;
+                } catch(e) {
+                    nowEl.textContent = `${nowD.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})}`;
+                }
+            }
+
+            const statusEl = document.getElementById('timer-status');
+            if (statusEl) {
+                if (timerState === 'running') statusEl.textContent = currentMode === 'work' ? 'FOCUSING' : 'RELAXING';
+                else if (timerState === 'paused') statusEl.textContent = 'PAUSED';
+                else statusEl.textContent = 'READY';
+            }
+
+            const modeText = currentMode === 'work' ? (dict.focus_time || 'FOCUS') : (dict.break_time || 'BREAK');
+            document.title = timerState === 'running' 
+                ? `[${formatTime(timeRemaining)}] ${modeText} - ${dict.app_title || 'Pomodoro'}`
+                : (dict.app_title || 'Pomodoro');
+        }
+
+        function startTimer(isUserAction = false) {
+            if (timerState === 'running') return;
+            
+            if (isUserAction) {
+                playSound();
+            }
+
+            timerState = 'running';
+            targetEndTime = Date.now() + (timeRemaining * 1000);
+
+            const playIcon = document.getElementById('icon-play');
+            if (playIcon) playIcon.classList.add('hidden');
+
+            const pauseIcon = document.getElementById('icon-pause');
+            if (pauseIcon) pauseIcon.classList.remove('hidden');
+
+            const toggleText = document.getElementById('btn-toggle-text');
+            const dict = I18N[config.lang] || I18N['ja'];
+            if (toggleText) toggleText.textContent = dict.btn_pause || 'Pause';
+
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(tick, 200);
+
+            updateTimerDisplay();
+        }
+
+        function pauseTimer(isReset = false) {
+            timerState = isReset ? 'stopped' : 'paused';
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+
+            const playIcon = document.getElementById('icon-play');
+            if (playIcon) playIcon.classList.remove('hidden');
+
+            const pauseIcon = document.getElementById('icon-pause');
+            if (pauseIcon) pauseIcon.classList.add('hidden');
+
+            const toggleText = document.getElementById('btn-toggle-text');
+            const dict = I18N[config.lang] || I18N['ja'];
+            if (toggleText) toggleText.textContent = dict.btn_start || 'Start';
+
+            updateTimerDisplay();
+        }
+
+        function resetTimer() {
+            recordPartialWork();
+            pauseTimer(true);
+            config.cycle = 1;
+            saveConfig();
+            const cyEl = document.getElementById('cycle-display');
+            if (cyEl) cyEl.textContent = getCycleStr(1);
+
+            switchMode('work', false);
+            showToast(config.lang === 'en' ? 'Reset timer and cycle' : 'タイマーとサイクルをリセットしました');
+        }
+
+        function tick() {
+            const now = Date.now();
+            const remain = Math.ceil((targetEndTime - now) / 1000);
+
+            if (remain <= 0) {
+                timeRemaining = 0;
+                updateTimerDisplay();
+                onSessionComplete();
+            } else {
+                timeRemaining = remain;
+                updateTimerDisplay();
+            }
+        }
+
+        function skipSession() {
+            switchView('timer');
+            recordPartialWork();
+            pauseTimer(true);
+            const nextMode = currentMode === 'work' ? 'break' : 'work';
+            switchMode(nextMode, false);
+        }
+
+        function onSessionComplete() {
+            switchView('timer');
+            pauseTimer(true);
+            playSound();
+
+            if (currentMode === 'work') {
+                const today = getTodayStr();
+                const addedMins = parseInt(config.workMins, 10) || 50;
+                records[today] = (records[today] || 0) + addedMins;
+                saveRecords();
+
+                if (config.syncKey && config.gasUrl) {
+                    const hashed = stableKeyHash(config.syncKey);
+                    execJSONP({
+                        action: 'increment',
+                        syncKeyHash: hashed,
+                        logDate: today,
+                        minutes: addedMins
+                    }).catch(e => console.warn('Auto sync fail:', e));
+                }
+
+                switchMode('break', true);
+            } else {
+                config.cycle = (config.cycle || 1) + 1;
+                saveConfig();
+                const cyEl = document.getElementById('cycle-display');
+                if (cyEl) cyEl.textContent = getCycleStr(config.cycle);
+
+                const autoEl = document.getElementById('setting-auto-start');
+                const isAuto = autoEl ? autoEl.checked : config.autoStart;
+                switchMode('work', isAuto);
+            }
+        }
+
+        let audioCtx = null;
+
+        function initAudio() {
+            try {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) audioCtx = new AudioContextClass();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume().catch(e => console.warn(e));
+                }
+            } catch (e) {
+                console.warn('Audio restriction in preview sandbox:', e);
+            }
+        }
+
+        function playSound() {
+            if (!config.soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            try {
+                const now = audioCtx.currentTime;
+                if (config.soundType === 'wood') {
+                    [880, 1320].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + (idx * 0.12));
+                        gain.gain.setValueAtTime(0, now + (idx * 0.12));
+                        gain.gain.linearRampToValueAtTime(0.85, now + (idx * 0.12) + 0.005);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.12) + 0.08);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(now + (idx * 0.12)); osc.stop(now + (idx * 0.12) + 0.09);
+                    });
+                } else if (config.soundType === 'bell') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1046.50, now);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.85, now + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.4);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 2.45);
+                } else {
+                    [587.33, 880.00].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + (idx * 0.18));
+                        gain.gain.setValueAtTime(0, now + (idx * 0.18));
+                        gain.gain.linearRampToValueAtTime(0.85, now + (idx * 0.18) + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.18) + 0.6);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(now + (idx * 0.18)); osc.stop(now + (idx * 0.18) + 0.65);
+                    });
+                }
+            } catch (e) {
+                console.warn('Play sound error:', e);
+            }
+        }
+
+        function formatDateRaw(y, m, d) {
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
+
+        function stepPeriod(delta) {
+            if (currentRecordPeriod === 'day') {
+                currentRecordDate.setDate(currentRecordDate.getDate() + delta);
+            } else if (currentRecordPeriod === 'week') {
+                currentRecordDate.setDate(currentRecordDate.getDate() + delta * 7);
+            } else if (currentRecordPeriod === 'month') {
+                currentRecordDate.setDate(1);
+                currentRecordDate.setMonth(currentRecordDate.getMonth() + delta);
+            } else if (currentRecordPeriod === 'year') {
+                currentRecordDate.setDate(1);
+                currentRecordDate.setFullYear(currentRecordDate.getFullYear() + delta);
+            }
+            currentCalYear = currentRecordDate.getFullYear();
+            currentCalMonth = currentRecordDate.getMonth();
+            renderCalendar();
+        }
+
+        function jumpToday() {
+            currentRecordDate = new Date();
+            if (currentRecordPeriod === 'year') {
+                currentRecordPeriod = 'month';
+            }
+            currentCalYear = currentRecordDate.getFullYear();
+            currentCalMonth = currentRecordDate.getMonth();
+            renderCalendar();
+        }
+
+        function fmtDuration(mins, langKey) {
+            const isJp = !langKey || langKey === 'ja';
+            if (mins <= 0) return isJp ? '0分' : '0m';
+            if (isJp) {
+                if (mins >= 60) {
+                    const h = Math.floor(mins / 60);
+                    const rm = mins % 60;
+                    return rm > 0 ? `${h}時間${rm}分` : `${h}時間`;
+                }
+                return `${mins}分`;
+            } else {
+                if (mins >= 60) {
+                    const h = Math.floor(mins / 60);
+                    const rm = mins % 60;
+                    return rm > 0 ? `${h}h${rm}m` : `${h}h`;
+                }
+                return `${mins}m`;
+            }
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('records-content-area');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const lang = config.lang || 'ja';
+            const dict = I18N[lang] || I18N['ja'];
+
+            const tabNames = {
+                day: { ja: '日', en: 'Day', zh: '日', es: 'Día', pt: 'Dia', ko: '일', fr: 'Jour', de: 'Tag' },
+                week: { ja: '週', en: 'Week', zh: '周', es: 'Sem', pt: 'Sem', ko: '주', fr: 'Sem', de: 'Woche' },
+                month: { ja: '月', en: 'Month', zh: '月', es: 'Mes', pt: 'Mês', ko: '월', fr: 'Mois', de: 'Monat' },
+                year: { ja: '年', en: 'Year', zh: '年', es: 'Año', pt: 'Ano', ko: '년', fr: 'An', de: 'Jahr' },
+                list: { ja: '一覧', en: 'List', zh: '列表', es: 'Lista', pt: 'Lista', ko: '목록', fr: 'Liste', de: 'Liste' },
+                graph: { ja: 'グラフ', en: 'Chart', zh: '图表', es: 'Gráfico', pt: 'Gráfico', ko: '그래프', fr: 'Graph.', de: 'Diagr.' }
+            };
+
+            const lblTime = {
+                day: { ja: '今日の集中時間', en: 'Daily Focus', zh: '今日专注', es: 'Enfoque Diario', pt: 'Foco Diário', ko: '오늘의 집중', fr: 'Temps du jour', de: 'Fokus Heute' },
+                week: { ja: '今週の集中時間', en: 'Weekly Focus', zh: '本周专注', es: 'Enfoque Semanal', pt: 'Foco Semanal', ko: '이번 주 집중', fr: 'Temps hebd.', de: 'Fokus Woche' },
+                month: { ja: '今月の集中時間', en: 'Monthly Focus', zh: '本月专注', es: 'Enfoque Mensual', pt: 'Foco Mensal', ko: '이번 달 집중', fr: 'Temps mens.', de: 'Fokus Monat' },
+                year: { ja: '今年の集中時間', en: 'Yearly Focus', zh: '今年专注', es: 'Enfoque Anual', pt: 'Foco Anual', ko: '올해의 집중', fr: 'Temps annuel', de: 'Fokus Jahr' }
+            };
+
+            const lblDays = {
+                day: { ja: '達成サイクル', en: 'Completed Cycles', zh: '完成循环', es: 'Ciclos', pt: 'Ciclos', ko: '완료 사이클', fr: 'Cycles terminés', de: 'Zyklen' },
+                other: { ja: '集中した日数', en: 'Days Focused', zh: '专注天数', es: 'Días activos', pt: 'Dias ativos', ko: '집중した日数', fr: 'Jours actifs', de: 'Aktive Tage' }
+            };
+
+            document.querySelectorAll('.period-tab').forEach(b => {
+                const p = b.getAttribute('data-period');
+                if (tabNames[p] && tabNames[p][lang]) b.textContent = tabNames[p][lang];
+                b.classList.toggle('active', p === currentRecordPeriod);
+            });
+            document.querySelectorAll('.mode-tab').forEach(b => {
+                const m = b.getAttribute('data-mode');
+                if (tabNames[m] && tabNames[m][lang]) b.textContent = tabNames[m][lang];
+                b.classList.toggle('active', m === currentRecordMode);
+            });
+
+            const sTimeLbl = document.getElementById('summary-label-time');
+            if (sTimeLbl) sTimeLbl.textContent = (lblTime[currentRecordPeriod] && lblTime[currentRecordPeriod][lang]) || lblTime[currentRecordPeriod]['ja'];
+            const sDaysLbl = document.getElementById('summary-label-days');
+            if (sDaysLbl) sDaysLbl.textContent = currentRecordPeriod === 'day' ? (lblDays.day[lang] || lblDays.day['ja']) : (dict.cal_total_days || lblDays.other['ja']);
+
+            const todayStr = getTodayStr();
+            let titleText = '';
+            let totalMins = 0;
+            let activeDays = 0;
+            let chartData = [];
+
+            if (currentRecordPeriod === 'day') {
+                const y = currentRecordDate.getFullYear();
+                const m = currentRecordDate.getMonth() + 1;
+                const d = currentRecordDate.getDate();
+                const ds = formatDateRaw(y, m, d);
+                totalMins = records[ds] || 0;
+                activeDays = Math.floor(totalMins / (config.defaultWork || 50));
+                
+                const wdIdx = currentRecordDate.getDay();
+                const wdName = dict.weekdays ? dict.weekdays[wdIdx] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wdIdx];
+                titleText = (lang==='ja'||lang==='zh'||lang==='ko') ? `${y}年${m}月${d}日 (${wdName})` : `${ds} (${wdName})`;
+
+                for (let i = -6; i <= 0; i++) {
+                    const dt = new Date(currentRecordDate);
+                    dt.setDate(currentRecordDate.getDate() + i);
+                    const dStr = formatDateRaw(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+                    const val = records[dStr] || 0;
+                    const wIdx = dt.getDay();
+                    const wLbl = dict.weekdays ? dict.weekdays[wIdx] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wIdx];
+                    chartData.push({
+                        label: `${dt.getMonth()+1}/${dt.getDate()}`,
+                        subLabel: wLbl,
+                        mins: val,
+                        dateStr: dStr,
+                        isHighlight: i === 0
+                    });
+                }
+            } else if (currentRecordPeriod === 'week') {
+                const dayOfWeek = currentRecordDate.getDay();
+                let diff = config.startOnMonday ? (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) : -dayOfWeek;
+                const startW = new Date(currentRecordDate);
+                startW.setDate(currentRecordDate.getDate() + diff);
+
+                for (let i = 0; i < 7; i++) {
+                    const dt = new Date(startW);
+                    dt.setDate(startW.getDate() + i);
+                    const dStr = formatDateRaw(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+                    const val = records[dStr] || 0;
+                    totalMins += val;
+                    if (val > 0) activeDays++;
+                    const wIdx = dt.getDay();
+                    const wLbl = dict.weekdays ? dict.weekdays[wIdx] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wIdx];
+                    chartData.push({
+                        label: `${dt.getMonth()+1}/${dt.getDate()}`,
+                        subLabel: wLbl,
+                        mins: val,
+                        dateStr: dStr,
+                        isHighlight: dStr === todayStr
+                    });
+                }
+                const endW = new Date(startW);
+                endW.setDate(startW.getDate() + 6);
+                titleText = (lang==='ja'||lang==='zh'||lang==='ko')
+                    ? `${startW.getFullYear()}年${startW.getMonth()+1}月${startW.getDate()}日 〜 ${endW.getMonth()+1}月${endW.getDate()}日`
+                    : `${formatDateRaw(startW.getFullYear(),startW.getMonth()+1,startW.getDate())} ~ ${formatDateRaw(endW.getFullYear(),endW.getMonth()+1,endW.getDate())}`;
+            } else if (currentRecordPeriod === 'month') {
+                const y = currentRecordDate.getFullYear();
+                const m = currentRecordDate.getMonth();
+                const dim = new Date(y, m + 1, 0).getDate();
+                for (let d = 1; d <= dim; d++) {
+                    const dStr = formatDateRaw(y, m + 1, d);
+                    const val = records[dStr] || 0;
+                    totalMins += val;
+                    if (val > 0) activeDays++;
+                    chartData.push({
+                        label: `${d}`,
+                        subLabel: '',
+                        mins: val,
+                        dateStr: dStr,
+                        isHighlight: dStr === todayStr
+                    });
+                }
+                titleText = (lang==='ja'||lang==='zh'||lang==='ko') ? `${y}年 ${m+1}月` : `${y} / ${m+1}`;
+            } else if (currentRecordPeriod === 'year') {
+                const y = currentRecordDate.getFullYear();
+                for (let mo = 0; mo < 12; mo++) {
+                    const dim = new Date(y, mo + 1, 0).getDate();
+                    let moMins = 0;
+                    let moDays = 0;
+                    for (let d = 1; d <= dim; d++) {
+                        const dStr = formatDateRaw(y, mo + 1, d);
+                        const val = records[dStr] || 0;
+                        moMins += val;
+                        if (val > 0) { moDays++; }
+                    }
+                    totalMins += moMins;
+                    if (moDays > 0) activeDays += moDays;
+                    chartData.push({
+                        label: `${mo+1}${lang==='ja'||lang==='zh'?'月':''}`,
+                        subLabel: `${moDays}d`,
+                        mins: moMins,
+                        monthIdx: mo,
+                        isHighlight: mo === new Date().getMonth() && y === new Date().getFullYear()
+                    });
+                }
+                titleText = `${y}${lang==='ja'||lang==='zh'||lang==='ko'?'年':''}`;
+            }
+
+            const titleEl = document.getElementById('calendar-month-title');
+            if (titleEl) titleEl.textContent = titleText;
+
+            const totTimeEl = document.getElementById('cal-total-time');
+            if (totTimeEl) {
+                totTimeEl.textContent = fmtDuration(totalMins, lang);
+            }
+            const totDaysEl = document.getElementById('cal-total-days');
+            if (totDaysEl) {
+                if (currentRecordPeriod === 'day') {
+                    const unit = lang==='ja'?'回':(lang==='ko'?'회':(lang==='zh'?'次':'cycles'));
+                    totDaysEl.textContent = `${activeDays} ${unit}`;
+                } else {
+                    totDaysEl.textContent = `${activeDays} ${dict.day_unit || '日'}`;
+                }
+            }
+
+            if (currentRecordMode === 'graph') {
+                renderGraphView(container, chartData);
+            } else {
+                renderListView(container, dict, todayStr);
+            }
+        }
+
+        function renderGraphView(container, chartData) {
+            const maxVal = Math.max(1, ...chartData.map(d => d.mins));
+            const isScroll = currentRecordPeriod === 'month';
+            
+            const chartBox = document.createElement('div');
+            chartBox.className = 'chart-box';
+            
+            const wrap = document.createElement('div');
+            wrap.className = 'chart-bars-wrap' + (isScroll ? ' scrollable' : '');
+
+            chartData.forEach(item => {
+                const col = document.createElement('div');
+                col.className = 'chart-col' + (item.isHighlight ? ' highlight' : '');
+                
+                if (item.dateStr) {
+                    const isFut = item.dateStr > getTodayStr();
+                    if (!isFut) {
+                        col.classList.add('record-clickable');
+                        col.setAttribute('data-date', item.dateStr);
+                    } else {
+                        col.style.opacity = '0.35';
+                        col.style.cursor = 'default';
+                    }
+                } else if (item.monthIdx !== undefined) {
+                    col.classList.add('year-card');
+                    col.setAttribute('data-mo', item.monthIdx);
+                }
+
+                const pct = Math.round((item.mins / maxVal) * 100);
+                const valStr = item.mins > 0 ? fmtDuration(item.mins, config.lang) : '';
+
+                col.innerHTML = `
+                    <div class="chart-val font-mono">${valStr}</div>
+                    <div class="chart-track"><div class="chart-fill" style="height: ${pct}%;"></div></div>
+                    <div class="chart-lbl font-mono">${item.label}</div>
+                `;
+                wrap.appendChild(col);
+            });
+
+            chartBox.appendChild(wrap);
+            container.appendChild(chartBox);
+        }
+
+        function renderListView(container, dict, todayStr) {
+            if (currentRecordPeriod === 'month') {
+                const grid = document.createElement('div');
+                grid.className = 'calendar-grid';
+                grid.id = 'calendar-grid';
+
+                const sunObj = { name: (dict.weekdays ? dict.weekdays[0] : 'Sun'), class: 'sun' };
+                const satObj = { name: (dict.weekdays ? dict.weekdays[6] : 'Sat'), class: 'sat' };
+                const wMonNames = dict.weekdays ? [dict.weekdays[1], dict.weekdays[2], dict.weekdays[3], dict.weekdays[4], dict.weekdays[5]] : ['Mon','Tue','Wed','Thu','Fri'];
+                
+                const weekdaysMon = [{name:wMonNames[0]}, {name:wMonNames[1]}, {name:wMonNames[2]}, {name:wMonNames[3]}, {name:wMonNames[4]}, satObj, sunObj];
+                const weekdaysSun = [sunObj, {name:wMonNames[0]}, {name:wMonNames[1]}, {name:wMonNames[2]}, {name:wMonNames[3]}, {name:wMonNames[4]}, satObj];
+                const wDays = config.startOnMonday ? weekdaysMon : weekdaysSun;
+
+                wDays.forEach(wd => {
+                    const h = document.createElement('div');
+                    h.className = 'weekday ' + (wd.class || '');
+                    h.textContent = wd.name;
+                    grid.appendChild(h);
+                });
+
+                const y = currentRecordDate.getFullYear();
+                const m = currentRecordDate.getMonth();
+                const firstDayRaw = new Date(y, m, 1).getDay();
+                const firstDay = config.startOnMonday ? (firstDayRaw + 6) % 7 : firstDayRaw;
+                const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+                for (let i = 0; i < firstDay; i++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'cal-day empty';
+                    grid.appendChild(emptyCell);
+                }
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const mStr = String(m + 1).padStart(2, '0');
+                    const dStr = String(d).padStart(2, '0');
+                    const dateStr = `${y}-${mStr}-${dStr}`;
+                    const isFuture = dateStr > todayStr;
+
+                    const cell = document.createElement('div');
+                    cell.className = 'cal-day' + (isFuture ? ' future' : '');
+                    if (dateStr === todayStr) cell.classList.add('today');
+
+                    const numSpan = document.createElement('div');
+                    numSpan.className = 'day-num font-mono';
+                    numSpan.textContent = d;
+                    cell.appendChild(numSpan);
+
+                    const mins = records[dateStr] || 0;
+                    if (mins > 0) {
+                        const badge = document.createElement('div');
+                        badge.className = 'record-badge font-mono';
+                        badge.textContent = fmtDuration(mins, config.lang);
+                        cell.appendChild(badge);
+
+                        if (mins >= 120) cell.classList.add('level-4');
+                        else if (mins >= 75) cell.classList.add('level-3');
+                        else if (mins >= 40) cell.classList.add('level-2');
+                        else cell.classList.add('level-1');
+                    }
+
+                    if (!isFuture) {
+                        cell.classList.add('record-clickable');
+                        cell.setAttribute('data-date', dateStr);
+                    }
+                    grid.appendChild(cell);
+                }
+                container.appendChild(grid);
+            } else if (currentRecordPeriod === 'day') {
+                const y = currentRecordDate.getFullYear();
+                const m = currentRecordDate.getMonth() + 1;
+                const d = currentRecordDate.getDate();
+                const ds = formatDateRaw(y, m, d);
+                const mins = records[ds] || 0;
+                const isFut = ds > todayStr;
+
+                const card = document.createElement('div');
+                card.className = 'day-detail-card';
+                
+                const cyc = Math.floor(mins / (config.defaultWork || 50));
+                const cycStr = config.lang === 'en' ? `${cyc} cycles completed` : `${cyc} サイクル完了`;
+                const editDesc = config.lang === 'en' ? 'Tap below to record or edit focus time.' : 'タップしてこの日の記録を入力・保存できます';
+                const btnLbl = config.lang === 'en' ? 'Edit Record' : '記録を入力・保存する';
+
+                card.innerHTML = `
+                    <div class="day-detail-mins font-mono">${fmtDuration(mins, config.lang)}</div>
+                    <div class="day-detail-sub">${cycStr}<br><span style="font-size: 0.78rem; opacity: 0.8;">${editDesc}</span></div>
+                    ${!isFut ? `<button class="btn btn-main record-clickable" data-date="${ds}" style="padding: 12px 28px; font-size: 0.95rem;">${btnLbl}</button>` : `<div style="font-size:0.85rem; color:var(--text-muted);">未来の日付です</div>`}
+                `;
+                container.appendChild(card);
+            } else if (currentRecordPeriod === 'week') {
+                const dayOfWeek = currentRecordDate.getDay();
+                let diff = config.startOnMonday ? (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) : -dayOfWeek;
+                const startW = new Date(currentRecordDate);
+                startW.setDate(currentRecordDate.getDate() + diff);
+
+                const list = document.createElement('div');
+                list.className = 'week-list';
+                
+                const maxWeekVal = Math.max(1, 120);
+
+                for (let i = 0; i < 7; i++) {
+                    const dt = new Date(startW);
+                    dt.setDate(startW.getDate() + i);
+                    const ds = formatDateRaw(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+                    const mins = records[ds] || 0;
+                    const isFut = ds > todayStr;
+                    const wIdx = dt.getDay();
+                    const wLbl = dict.weekdays ? dict.weekdays[wIdx] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wIdx];
+                    
+                    const row = document.createElement('div');
+                    row.className = 'week-row' + (ds === todayStr ? ' today' : '');
+                    if (!isFut) {
+                        row.classList.add('record-clickable');
+                        row.setAttribute('data-date', ds);
+                    } else {
+                        row.style.opacity = '0.4';
+                        row.style.cursor = 'default';
+                    }
+
+                    const pct = Math.min(100, Math.round((mins / maxWeekVal) * 100));
+                    const valStr = fmtDuration(mins, config.lang);
+
+                    row.innerHTML = `
+                        <div class="week-row-date font-mono">${dt.getMonth()+1}/${dt.getDate()} (${wLbl})</div>
+                        <div class="week-row-bar-wrap"><div class="week-row-bar" style="width: ${pct}%;"></div></div>
+                        <div class="week-row-mins font-mono">${valStr}</div>
+                    `;
+                    list.appendChild(row);
+                }
+                container.appendChild(list);
+            } else if (currentRecordPeriod === 'year') {
+                const y = currentRecordDate.getFullYear();
+                const grid = document.createElement('div');
+                grid.className = 'year-grid';
+
+                for (let mo = 0; mo < 12; mo++) {
+                    const dim = new Date(y, mo + 1, 0).getDate();
+                    let moMins = 0;
+                    let moDays = 0;
+                    for (let d = 1; d <= dim; d++) {
+                        const ds = formatDateRaw(y, mo + 1, d);
+                        const val = records[ds] || 0;
+                        moMins += val;
+                        if (val > 0) moDays++;
+                    }
+                    const valStr = fmtDuration(moMins, config.lang);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'year-card';
+                    card.setAttribute('data-mo', mo);
+                    card.innerHTML = `
+                        <div class="year-card-mo font-mono">${mo+1}${config.lang==='en'?'':'月'}</div>
+                        <div class="year-card-mins font-mono">${valStr}</div>
+                        <div class="year-card-days">${moDays} ${dict.day_unit || '日'}</div>
+                    `;
+                    grid.appendChild(card);
+                }
+                container.appendChild(grid);
+            }
+        }
+
+        function openRecordModal(dateStr) {
+            selectedModalDateStr = dateStr;
+            const titleEl = document.getElementById('modal-date-title');
+            if (titleEl) titleEl.textContent = `${dateStr}`;
+            
+            const curMins = records[dateStr] || 0;
+            const inputEl = document.getElementById('modal-mins-input');
+            if (inputEl) inputEl.value = curMins;
+
+            const modal = document.getElementById('record-modal');
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeRecordModal() {
+            const modal = document.getElementById('record-modal');
+            if (modal) modal.classList.remove('active');
+            selectedModalDateStr = '';
+        }
+
+        let isSyncing = false;
+
+        function updateSyncStatusUI(status = 'idle', msg = '') {
+            const lastSyncTimeEl = document.getElementById('last-sync-time');
+            if (!lastSyncTimeEl) return;
+            const dict = I18N[config.lang] || I18N['ja'];
+            if (status === 'success') {
+                const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                lastSyncTimeEl.textContent = `Sync: ${nowStr}`;
+                safeStorage.set('pomodoro_last_sync', `${nowStr}`);
+            } else if (status === 'error') {
+                lastSyncTimeEl.textContent = `Sync Fail: ${msg || 'Error'}`;
+            } else {
+                const savedTime = safeStorage.get('pomodoro_last_sync');
+                if (savedTime) lastSyncTimeEl.textContent = `Last Sync: ${savedTime}`;
+                else lastSyncTimeEl.textContent = dict.status_no_sync || 'Sync: None';
+            }
+        }
+
+        function execJSONP(params) {
+            return new Promise((resolve, reject) => {
+                const targetUrl = config.gasUrl;
+                if (!targetUrl) return reject(new Error('URL missing'));
+
+                const cbName = 'jsonp_cb_' + Date.now() + '_' + Math.round(1000000 * Math.random());
+                const script = document.createElement('script');
+                
+                let timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('Timeout'));
+                }, 20000);
+
+                function cleanup() {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    delete window[cbName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                }
+
+                window[cbName] = function(res) {
+                    cleanup();
+                    resolve(res);
+                };
+
+                const query = new URLSearchParams({ ...params, callback: cbName }).toString();
+                script.src = `${targetUrl}?${query}`;
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('Fetch Failed'));
+                };
+
+                document.body.appendChild(script);
+            });
+        }
+
+        async function syncRecordsWithGAS(isSilent = false) {
+            if (isSyncing) return;
+            if (!config.gasUrl || !config.syncKey) {
+                if (!isSilent) showToast(config.lang === 'en' ? 'Please configure Apps Script URL and Sync Key first' : 'Apps Script URLと共有キーを設定してください');
+                return;
+            }
+
+            const hashed = stableKeyHash(config.syncKey);
+            isSyncing = true;
+            updateSyncStatusUI('syncing');
+            if (!isSilent) {
+                showToast(config.lang === 'en' ? 'Syncing with spreadsheet...' : 'スプレッドシートと同期中...');
+            }
+
+            try {
+                await execJSONP({
+                    action: 'reset',
+                    syncKeyHash: hashed
+                });
+
+                const dates = Object.keys(records);
+                for (const date of dates) {
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+                    const mins = Number(records[date]) || 0;
+                    if (mins > 0) {
+                        await execJSONP({
+                            action: 'increment',
+                            syncKeyHash: hashed,
+                            logDate: date,
+                            minutes: mins
+                        });
+                    }
+                }
+
+                const cfgRes = await execJSONP({
+                    action: 'saveConfig',
+                    syncKeyHash: hashed,
+                    configJson: JSON.stringify(config)
+                });
+
+                if (cfgRes && cfgRes.ok === false) {
+                    if (cfgRes.error === '不明な操作です。') {
+                        throw new Error('Apps Scriptのコードが旧バージョンのままです。エディタの「デプロイを管理」より【新バージョン】として再デプロイしてください。');
+                    } else {
+                        throw new Error(cfgRes.error);
+                    }
+                }
+
+                updateSyncStatusUI('success');
+                if (!isSilent) {
+                    showToast(config.lang === 'en' ? 'Successfully synced records and settings to spreadsheet' : '記録と設定をスプレッドシートに同期しました');
+                }
+            } catch (err) {
+                console.error(err);
+                updateSyncStatusUI('error', err.message);
+                if (!isSilent) {
+                    showToast(config.lang === 'en' ? 'Sync failed: ' + err.message : '同期に失敗しました: ' + err.message);
+                }
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+
+            const sec = document.getElementById(`view-${viewName}`);
+            if (sec) sec.classList.remove('hidden');
+
+            const navBtn = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+            if (navBtn) navBtn.classList.add('active');
+
+            if (viewName === 'calendar') {
+                renderCalendar();
+            }
+        }
+
+        function bindAllEventsSafe() {
+            document.onclick = (e) => {
+                const navBtn = e.target.closest('.nav-item');
+                if (navBtn) {
+                    switchView(navBtn.getAttribute('data-view'));
+                    return;
+                }
+                const pTab = e.target.closest('.period-tab');
+                if (pTab) {
+                    currentRecordPeriod = pTab.getAttribute('data-period');
+                    renderCalendar();
+                    return;
+                }
+                const mTab = e.target.closest('.mode-tab');
+                if (mTab) {
+                    currentRecordMode = mTab.getAttribute('data-mode');
+                    renderCalendar();
+                    return;
+                }
+                const clk = e.target.closest('.record-clickable');
+                if (clk) {
+                    const ds = clk.getAttribute('data-date');
+                    if (ds) openRecordModal(ds);
+                    return;
+                }
+                const yC = e.target.closest('.year-card');
+                if (yC) {
+                    const mo = Number(yC.getAttribute('data-mo'));
+                    if (!isNaN(mo)) {
+                        currentRecordDate.setMonth(mo);
+                        currentRecordPeriod = 'month';
+                        renderCalendar();
+                    }
+                    return;
+                }
+                const btnJump = e.target.closest('#btn-jump-today');
+                if (btnJump) { jumpToday(); return; }
+                const btnPrev = e.target.closest('#btn-prev-month');
+                if (btnPrev) { stepPeriod(-1); return; }
+                const btnNext = e.target.closest('#btn-next-month');
+                if (btnNext) { stepPeriod(1); return; }
+                const btnCloseRec = e.target.closest('#btn-close-modal');
+                if (btnCloseRec) { closeRecordModal(); return; }
+                const modalRecBg = e.target.closest('#record-modal');
+                if (modalRecBg && e.target === modalRecBg) { closeRecordModal(); return; }
+                const btnSaveRec = e.target.closest('#btn-modal-save');
+                if (btnSaveRec) {
+                    if (selectedModalDateStr) {
+                        const inp = document.getElementById('modal-mins-input');
+                        const val = Math.min(999, Math.max(1, parseInt(inp ? inp.value : '1', 10) || 1));
+                        records[selectedModalDateStr] = val;
+                        saveRecords(); closeRecordModal();
+                        if (config.syncKey) syncRecordsWithGAS(true);
+                    }
+                    return;
+                }
+                const btnDelRec = e.target.closest('#btn-modal-delete');
+                if (btnDelRec) {
+                    if (selectedModalDateStr) {
+                        const cm = document.getElementById('delete-confirm-modal');
+                        const cmMsg = document.getElementById('del-confirm-msg');
+                        if (cmMsg) cmMsg.textContent = config.lang === 'en' ? 'Are you sure you want to delete this?' : '本当に削除しますか？';
+                        if (cm) cm.classList.add('active');
+                    }
+                    return;
+                }
+                const btnCancelDel = e.target.closest('#btn-cancel-delete');
+                if (btnCancelDel) {
+                    const cm = document.getElementById('delete-confirm-modal');
+                    if (cm) cm.classList.remove('active');
+                    return;
+                }
+                const btnExecDel = e.target.closest('#btn-exec-delete');
+                if (btnExecDel) {
+                    if (selectedModalDateStr) {
+                        delete records[selectedModalDateStr]; saveRecords(); closeRecordModal();
+                        if (config.syncKey) syncRecordsWithGAS(true);
+                        showToast(config.lang === 'en' ? 'Deleted' : '記録を削除しました');
+                    }
+                    const cm = document.getElementById('delete-confirm-modal');
+                    if (cm) cm.classList.remove('active');
+                    return;
+                }
+                const delModBg = e.target.closest('#delete-confirm-modal');
+                if (delModBg && e.target === delModBg) {
+                    delModBg.classList.remove('active');
+                    return;
+                }
+                const btnCloseGas = e.target.closest('#btn-close-gas-modal');
+                if (btnCloseGas) {
+                    const gm = document.getElementById('gas-code-modal');
+                    if (gm) gm.classList.remove('active');
+                    return;
+                }
+                const modalGasBg = e.target.closest('#gas-code-modal');
+                if (modalGasBg && e.target === modalGasBg) {
+                    modalGasBg.classList.remove('active');
+                    return;
+                }
+            };
+
+            document.addEventListener('change', (e) => {
+                if (e.target.id === 'setting-auto-start') {
+                    config.autoStart = e.target.checked; saveConfig();
+                } else if (e.target.id === 'setting-sound') {
+                    config.soundEnabled = e.target.checked; saveConfig();
+                } else if (e.target.id === 'setting-sound-type') {
+                    config.soundType = e.target.value; saveConfig(); applyConfigToUI();
+                } else if (e.target.id === 'setting-lang') {
+                    config.lang = e.target.value; saveConfig(); applyLanguageToUI(config.lang);
+                } else if (e.target.id === 'setting-timezone') {
+                    config.timezone = e.target.value; saveConfig();
+                } else if (e.target.id === 'setting-font') {
+                    config.fontFamily = e.target.value; saveConfig(); applyFontToRoot(config.fontFamily);
+                } else if (e.target.id === 'setting-font-scale') {
+                    config.fontScale = e.target.value; saveConfig(); applyFontScaleToRoot(config.fontScale);
+                } else if (e.target.id === 'setting-start-day') {
+                    config.startOnMonday = (e.target.value === 'monday'); saveConfig(); renderCalendar();
+                } else if (e.target.id === 'timer-work-mins' || e.target.id === 'setting-default-work') {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                    config.workMins = val;
+                    const w1 = document.getElementById('timer-work-mins'); if (w1 && w1 !== e.target) w1.value = val;
+                    const w2 = document.getElementById('setting-default-work'); if (w2 && w2 !== e.target) w2.value = val;
+                    saveConfig();
+                    if (currentMode === 'work' && timerState === 'stopped') switchMode('work', false);
+                } else if (e.target.id === 'timer-break-mins' || e.target.id === 'setting-default-break') {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                    config.breakMins = val;
+                    const b1 = document.getElementById('timer-break-mins'); if (b1 && b1 !== e.target) b1.value = val;
+                    const b2 = document.getElementById('setting-default-break'); if (b2 && b2 !== e.target) b2.value = val;
+                    saveConfig();
+                    if (currentMode === 'break' && timerState === 'stopped') switchMode('break', false);
+                } else if (e.target.id === 'modal-mins-input') {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                }
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindAllEventsSafe);
+        } else {
+            bindAllEventsSafe();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            bindAllEventsSafe();
+            try { loadStorage(); } catch(e){}
+
+            const syncPanelToggleBtn = document.getElementById('btn-toggle-sync-panel');
+            if (syncPanelToggleBtn) {
+                syncPanelToggleBtn.addEventListener('click', () => {
+                    config.syncPanelOpen = !config.syncPanelOpen;
+                    saveConfig(); applyConfigToUI();
+                });
+            }
+
+            const urlInputEl = document.getElementById('sync-gas-url-input');
+            const keyInputEl = document.getElementById('sync-key-input');
+
+            if (keyInputEl && urlInputEl) {
+                keyInputEl.addEventListener('change', () => {
+                    config.syncKey = keyInputEl.value.trim();
+                    saveConfig(); tryRestoreConfigProfile();
+                });
+
+                urlInputEl.addEventListener('change', () => {
+                    config.gasUrl = urlInputEl.value.trim();
+                    saveConfig(); tryRestoreConfigProfile();
+                });
+            }
+
+            const genKeyBtn = document.getElementById('btn-generate-key');
+            const visBtn = document.getElementById('btn-toggle-key-visibility');
+            if (genKeyBtn && keyInputEl) {
+                genKeyBtn.addEventListener('click', () => {
+                    const uniqueRand = 'key_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+                    config.syncKey = uniqueRand; keyInputEl.value = uniqueRand;
+                    if (visBtn) keyInputEl.type = 'text';
+                    saveConfig();
+                });
+            }
+
+            if (visBtn && keyInputEl) {
+                visBtn.addEventListener('click', () => {
+                    const dict = I18N[config.lang] || I18N['ja'];
+                    if (keyInputEl.type === 'password') {
+                        keyInputEl.type = 'text'; visBtn.textContent = dict.btn_hide || 'Hide';
+                    } else {
+                        keyInputEl.type = 'password'; visBtn.textContent = dict.btn_show || 'Show';
+                    }
+                });
+            }
+
+            const copyGasBtn = document.getElementById('btn-copy-gas-source');
+            const gasTextarea = document.getElementById('textarea-gas-source');
+            if (copyGasBtn && gasTextarea) {
+                copyGasBtn.addEventListener('click', () => {
+                    gasTextarea.select(); document.execCommand('copy');
+                });
+            }
+
+            const syncNowBtn = document.getElementById('btn-sync-now');
+            if (syncNowBtn) syncNowBtn.addEventListener('click', () => syncRecordsWithGAS(false));
+
+            const toggleBtn = document.getElementById('btn-toggle');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    initAudio();
+                    if (timerState === 'running') pauseTimer(); else startTimer(true);
+                });
+            }
+
+            const resetBtn = document.getElementById('btn-reset');
+            if (resetBtn) resetBtn.addEventListener('click', resetTimer);
+
+            const skipBtn = document.getElementById('btn-skip');
+            if (skipBtn) skipBtn.addEventListener('click', skipSession);
+
+            const workMinsInput = document.getElementById('timer-work-mins');
+            if (workMinsInput) {
+                workMinsInput.addEventListener('change', (e) => {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                    config.workMins = val; saveConfig();
+                    if (currentMode === 'work' && timerState === 'stopped') switchMode('work', false);
+                });
+            }
+
+            const breakMinsInput = document.getElementById('timer-break-mins');
+            if (breakMinsInput) {
+                breakMinsInput.addEventListener('change', (e) => {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                    config.breakMins = val; saveConfig();
+                    if (currentMode === 'break' && timerState === 'stopped') switchMode('break', false);
+                });
+            }
+
+            const defWorkInput = document.getElementById('setting-default-work');
+            if (defWorkInput) {
+                defWorkInput.addEventListener('change', (e) => {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                    config.workMins = val; if (workMinsInput) workMinsInput.value = val;
+                    saveConfig(); if (currentMode === 'work' && timerState === 'stopped') switchMode('work', false);
+                });
+            }
+
+            const defBreakInput = document.getElementById('setting-default-break');
+            if (defBreakInput) {
+                defBreakInput.addEventListener('change', (e) => {
+                    const val = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    e.target.value = val;
+                    config.breakMins = val; if (breakMinsInput) breakMinsInput.value = val;
+                    saveConfig(); if (currentMode === 'break' && timerState === 'stopped') switchMode('break', false);
+                });
+            }
+
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const w = parseInt(e.currentTarget.getAttribute('data-work'), 10);
+                    const b = parseInt(e.currentTarget.getAttribute('data-break'), 10);
+                    config.workMins = w; config.breakMins = b;
+                    saveConfig(); applyConfigToUI();
+                    if (currentMode === 'work') switchMode('work', false); else switchMode('break', false);
+                });
+            });
+
+            document.querySelectorAll('.color-preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const wColor = e.currentTarget.getAttribute('data-work');
+                    const bColor = e.currentTarget.getAttribute('data-break');
+                    const tColor = e.currentTarget.getAttribute('data-text');
+                    config.workColor = wColor; config.breakColor = bColor;
+                    if (tColor) config.textColor = tColor;
+                    saveConfig();
+                    const wInput = document.getElementById('setting-work-color'); if (wInput) wInput.value = wColor;
+                    const bInput = document.getElementById('setting-break-color'); if (bInput) bInput.value = bColor;
+                    const tInput = document.getElementById('setting-text-color'); if (tInput && tColor) tInput.value = tColor;
+                    updateTheme(currentMode);
+                });
+            });
+
+            const langSelect = document.getElementById('setting-lang');
+            if (langSelect) {
+                langSelect.addEventListener('change', (e) => {
+                    config.lang = e.target.value; saveConfig(); applyLanguageToUI(config.lang);
+                });
+            }
+
+            const tzSelect = document.getElementById('setting-timezone');
+            if (tzSelect) {
+                tzSelect.addEventListener('change', (e) => {
+                    config.timezone = e.target.value; saveConfig(); updateTimerDisplay();
+                });
+            }
+
+            const fontSelect = document.getElementById('setting-font-family');
+            if (fontSelect) {
+                fontSelect.addEventListener('change', (e) => {
+                    config.fontFamily = e.target.value; saveConfig(); applyFontToRoot(config.fontFamily);
+                });
+            }
+
+            const fScaleSelect = document.getElementById('setting-font-scale');
+            if (fScaleSelect) {
+                fScaleSelect.addEventListener('change', (e) => {
+                    config.fontScale = e.target.value; saveConfig(); applyFontScaleToRoot(config.fontScale);
+                });
+            }
+
+            const startDaySelect = document.getElementById('setting-start-day');
+            if (startDaySelect) {
+                startDaySelect.addEventListener('change', (e) => {
+                    config.startOnMonday = (e.target.value === 'monday'); saveConfig(); renderCalendar();
+                });
+            }
+
+            const autoStartCheck = document.getElementById('setting-auto-start');
+            if (autoStartCheck) {
+                autoStartCheck.addEventListener('change', (e) => { config.autoStart = e.target.checked; saveConfig(); });
+            }
+
+            const soundCheck = document.getElementById('setting-sound');
+            if (soundCheck) {
+                soundCheck.addEventListener('change', (e) => { config.soundEnabled = e.target.checked; saveConfig(); });
+            }
+
+            const sTypeSelect = document.getElementById('setting-sound-type');
+            if (sTypeSelect) {
+                sTypeSelect.addEventListener('change', (e) => { config.soundType = e.target.value; saveConfig(); applyConfigToUI(); });
+            }
+
+            const testSoundBtn = document.getElementById('btn-test-sound');
+            if (testSoundBtn) {
+                testSoundBtn.addEventListener('click', () => { initAudio(); playSound(); });
+            }
+
+            const workColorInput = document.getElementById('setting-work-color');
+            if (workColorInput) {
+                workColorInput.addEventListener('input', (e) => {
+                    config.workColor = e.target.value; saveConfig();
+                    if (currentMode === 'work') updateTheme('work');
+                });
+            }
+
+            const resetWorkColorBtn = document.getElementById('btn-reset-work-color');
+            if (resetWorkColorBtn) {
+                resetWorkColorBtn.addEventListener('click', () => {
+                    config.workColor = '#D1EAF5'; if (workColorInput) workColorInput.value = '#D1EAF5';
+                    saveConfig(); if (currentMode === 'work') updateTheme('work');
+                });
+            }
+
+            const breakColorInput = document.getElementById('setting-break-color');
+            if (breakColorInput) {
+                breakColorInput.addEventListener('input', (e) => {
+                    config.breakColor = e.target.value; saveConfig();
+                    if (currentMode === 'break') updateTheme('break');
+                });
+            }
+
+            const resetBreakColorBtn = document.getElementById('btn-reset-break-color');
+            if (resetBreakColorBtn) {
+                resetBreakColorBtn.addEventListener('click', () => {
+                    config.breakColor = '#E6F2D6'; if (breakColorInput) breakColorInput.value = '#E6F2D6';
+                    saveConfig(); if (currentMode === 'break') updateTheme('break');
+                });
+            }
+
+            const textColorInput = document.getElementById('setting-text-color');
+            if (textColorInput) {
+                textColorInput.addEventListener('input', (e) => {
+                    config.textColor = e.target.value; saveConfig(); updateTheme(currentMode);
+                });
+            }
+
+            const resetTextColorBtn = document.getElementById('btn-reset-text-color');
+            if (resetTextColorBtn) {
+                resetTextColorBtn.addEventListener('click', () => {
+                    config.textColor = '#1A202C'; if (textColorInput) textColorInput.value = '#1A202C';
+                    saveConfig(); updateTheme(currentMode);
+                });
+            }
+        });
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

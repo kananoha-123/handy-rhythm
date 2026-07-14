@@ -1,2 +1,1 @@
-# SakuPomo
-This is a simple Pomodoro timer.
+これはシンプルなポモドーロタイマーとストップウォッチです。自動で時間が記録されます。

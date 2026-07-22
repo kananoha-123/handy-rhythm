@@ -1,0 +1,33 @@
+{
+  "name": "ベンリズム Pomodoro Timer",
+  "short_name": "ベンリズム",
+  "description": "集中時間と休憩時間を管理するポモドーロタイマー",
+  "lang": "ja",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#B6A383",
+  "theme_color": "#B6A383",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
